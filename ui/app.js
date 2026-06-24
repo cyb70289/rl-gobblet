@@ -256,75 +256,20 @@
     flashCell(cell);
   }
 
-  function resolveSourceElement(sel) {
-    if (!sel) return null;
-    if (sel.kind === 'tray') {
-      return document.querySelector(
-        `.tray-slot[data-color="${game.currentPlayer}"][data-piece-id="${sel.pieceId}"]`
-      );
-    }
-    if (sel.kind === 'board') {
-      return boardEl.querySelector(`.cell[data-cell="${sel.cell}"]`);
-    }
-    return null;
-  }
-
-  async function executeAction(cell) {
-    const startSeq = requestSeq;
-    animating = true;
-    render();
-
-    const sourceEl = resolveSourceElement(selected);
-    if (!sourceEl) {
-      animating = false;
-      render();
-      flashCell(cell);
-      return;
-    }
-
-    sourceEl.classList.add('shine');
-    await sleep(ANIM.shineMs);
-    // On requestSeq mismatch, restartGame() is the only caller that bumps
-    // requestSeq during an action; it always resets animating=false too,
-    // so we don't need to do it here.
-    if (startSeq !== requestSeq) return;
-    sourceEl.classList.remove('shine');
-
+  function executeAction(cell) {
     let res;
     if (selected.kind === 'tray') {
       res = game.place(selected.pieceId, cell);
     } else {
       res = game.move(selected.cell, cell);
     }
-    selected = null;
-
     if (!res.ok) {
-      animating = false;
-      render();
       flashCell(cell);
       return;
     }
-
+    selected = null;
     render();
-    if (startSeq !== requestSeq) return;
-
-    const destEl = boardEl.querySelector(`.cell[data-cell="${cell}"]`);
-    if (destEl) {
-      destEl.classList.add('shine');
-      await sleep(ANIM.shineMs);
-      if (startSeq !== requestSeq) return;
-      destEl.classList.remove('shine');
-    }
-
-    animating = false;
-
-    if (game.winner) {
-      render();
-    } else if (isModelTurn()) {
-      maybeFireModelMove();
-    } else {
-      render();
-    }
+    if (isModelTurn()) maybeFireModelMove();
   }
 
   function flashCell(cell) {

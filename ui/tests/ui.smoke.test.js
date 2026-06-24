@@ -407,20 +407,20 @@ test('UI: undo in manual mode still pops one ply', async () => {
   assert.match(w.document.getElementById('turn-label').textContent, /Blue/);
 });
 
-test('UI: source element receives the .shine class during a click', async () => {
-  // Use a non-zero shineMs so we can observe the class mid-animation
+test('UI: human moves do not add the .shine class (animation is model-only)', () => {
   const w = loadDom({ anim: { shineMs: 50 } });
   // red selects S and starts a click on cell 0
   findSlot(w, 'red', 'S').click();
   cellEl(w, 0).click();
-  // The render() inside executeAction creates a fresh DOM. Query by class.
-  const shiningSlot = w.document.querySelector('.tray-slot.shine');
-  assert.ok(shiningSlot, 'a tray slot should have .shine class right after click');
-  // wait for both shines to finish (2 * 50ms + buffer)
-  await new Promise(r => setTimeout(r, 250));
+  // No .shine should be applied for a human move.
   assert.strictEqual(
     w.document.querySelector('.tray-slot.shine'),
     null,
-    'tray slot .shine should be removed after animation'
+    'no tray slot should have .shine class after a human move'
+  );
+  assert.strictEqual(
+    w.document.querySelector('.cell.shine'),
+    null,
+    'no cell should have .shine class after a human move'
   );
 });
