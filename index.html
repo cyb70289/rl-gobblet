@@ -10,6 +10,25 @@
   <div class="app">
     <header class="topbar">
       <div id="turn-label" class="turn-label">Red's turn</div>
+
+      <div class="mode-controls">
+        <label class="ctl">
+          Mode:
+          <select id="mode-select">
+            <option value="manual" selected>Human vs Human</option>
+            <option value="model">Human vs Model</option>
+          </select>
+        </label>
+        <label class="ctl hidden" id="color-picker">
+          You are:
+          <select id="color-select">
+            <option value="red" selected>Red (first)</option>
+            <option value="blue">Blue (second)</option>
+          </select>
+        </label>
+        <span id="model-status" class="model-status" data-state="checking">checking…</span>
+      </div>
+
       <div class="controls">
         <button id="undo-btn" type="button" disabled>Undo</button>
         <button id="restart-btn" type="button">Restart</button>

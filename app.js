@@ -5,10 +5,20 @@
   let game = GobbletGame.create();
   let selected = null; // {kind:'tray', pieceId} | {kind:'board', cell} | null
 
+  // ---- model-mode state ----
+  let mode = 'manual';            // 'manual' | 'model'
+  let humanColor = 'red';         // 'red' | 'blue' (which color the human plays in model mode)
+  let modelAvailable = false;     // /api/health result
+  let modelThinking = false;      // /api/move request in flight
+  let lastError = null;           // most recent model error message (banner)
+  let requestSeq = 0;             // discard stale /api/move responses
+
   const RADII = { S: 20, M: 32, L: 44 };
   const SIZE_ORDER = ['S', 'M', 'L'];
   const BRIGHT = { red: [8, 78, 55], blue: [205, 70, 55] };
   const DARK = { red: [8, 55, 28], blue: [205, 55, 26] };
+  const COLOR_INT = { red: 0, blue: 1 };
+  const INT_COLOR = ['red', 'blue'];
 
   function shade(color, depthFromTop) {
     const b = BRIGHT[color], d = DARK[color];
@@ -44,6 +54,19 @@
   const bannerEl = el('banner');
   const undoBtn = el('undo-btn');
   const restartBtn = el('restart-btn');
+  const modeSelect = el('mode-select');
+  const colorSelect = el('color-select');
+  const colorPicker = el('color-picker');
+  const modelStatus = el('model-status');
+
+  function otherColor(c) { return c === 'red' ? 'blue' : 'red'; }
+  function modelColor() { return mode === 'model' ? otherColor(humanColor) : null; }
+  function isHumanTurn() {
+    return mode === 'manual' || game.currentPlayer === humanColor;
+  }
+  function isModelTurn() {
+    return mode === 'model' && modelAvailable && !game.winner && game.currentPlayer === modelColor();
+  }
 
   function sortedTray(color) {
     return game.tray(color).slice().sort((a, b) => SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size));
@@ -60,7 +83,8 @@
   function renderTray(node, color) {
     clearNode(node);
     node.classList.remove('active', 'red', 'blue');
-    if (!game.winner && game.currentPlayer === color) node.classList.add('active', color);
+    const interactive = !game.winner && isHumanTurn() && !modelThinking;
+    if (interactive) node.classList.add('active', color);
 
     const pieces = sortedTray(color);
     pieces.forEach((p) => {
@@ -87,10 +111,11 @@
       if (validSet.has(cell)) cellDiv.classList.add('valid');
       if (selected && selected.kind === 'board' && selected.cell === cell) cellDiv.classList.add('selected');
       if (winningSet.has(cell)) cellDiv.classList.add('winning');
+      if (modelThinking) cellDiv.classList.add('locked');
 
-      const stack = game.stackAt(cell); // bottom -> top
+      const stack = game.stackAt(cell);
       if (stack.length) {
-        const outerFirst = stack.slice().reverse(); // top (largest) first
+        const outerFirst = stack.slice().reverse();
         cellDiv.appendChild(buildPieceSvg(outerFirst));
       }
       cellDiv.addEventListener('click', () => onCellClick(cell));
@@ -98,15 +123,48 @@
     }
   }
 
+  function endText() {
+    if (mode === 'model') {
+      return game.winner === humanColor ? 'You win!' : 'Model wins!';
+    }
+    return `${capitalize(game.winner)} wins!`;
+  }
+
+  function modelStatusText() {
+    if (mode === 'manual') return '';
+    if (modelThinking) return 'model: thinking…';
+    if (!modelAvailable) return 'model: not available';
+    return 'model: ready';
+  }
+
+  function modelStatusState() {
+    if (mode === 'manual') return 'off';
+    if (modelThinking) return 'thinking';
+    if (!modelAvailable) return 'down';
+    return 'ready';
+  }
+
   function render() {
     const validSet = validDestinations();
     const winningSet = new Set(game.winningCells());
 
-    if (game.winner) {
-      turnLabelEl.textContent = `${capitalize(game.winner)} wins`;
+    if (lastError && !game.winner) {
+      turnLabelEl.textContent = lastError;
+      turnLabelEl.className = 'turn-label error';
+      bannerEl.textContent = lastError;
+      bannerEl.className = 'banner error';
+    } else if (game.winner) {
+      const txt = endText();
+      turnLabelEl.textContent = txt;
       turnLabelEl.className = `turn-label ${game.winner}`;
-      bannerEl.textContent = `${capitalize(game.winner)} wins!`;
+      bannerEl.textContent = txt;
       bannerEl.className = `banner ${game.winner}`;
+    } else if (modelThinking) {
+      const c = capitalize(game.currentPlayer);
+      turnLabelEl.textContent = `${c} is thinking…`;
+      turnLabelEl.className = `turn-label ${game.currentPlayer} thinking`;
+      bannerEl.className = 'banner hidden';
+      bannerEl.textContent = '';
     } else {
       turnLabelEl.textContent = `${capitalize(game.currentPlayer)}'s turn`;
       turnLabelEl.className = `turn-label ${game.currentPlayer}`;
@@ -118,7 +176,28 @@
     renderTray(redTrayEl, 'red');
     renderBoard(validSet, winningSet);
 
-    undoBtn.disabled = !game.canUndo();
+    undoBtn.disabled = !game.canUndo() || modelThinking;
+
+    // mode controls
+    colorPicker.classList.toggle('hidden', mode !== 'model');
+    const modeSelectDisabled = modelThinking;
+    modeSelect.disabled = modeSelectDisabled;
+    colorSelect.disabled = modeSelectDisabled || mode !== 'model';
+    modelStatus.textContent = modelStatusText();
+    modelStatus.dataset.state = modelStatusState();
+
+    // disable the "model" option in the mode select if model is unavailable
+    const modelOpt = modeSelect.querySelector('option[value="model"]');
+    if (modelOpt) {
+      modelOpt.disabled = !modelAvailable;
+      modelOpt.textContent = modelAvailable ? 'Human vs Model' : 'Human vs Model (offline)';
+    }
+    if (mode === 'model' && !modelAvailable && !modelThinking) {
+      // force back to manual if model became unavailable
+      mode = 'manual';
+      modeSelect.value = 'manual';
+      colorPicker.classList.add('hidden');
+    }
   }
 
   function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -129,7 +208,8 @@
   }
 
   function onTrayPieceClick(color, pieceId) {
-    if (game.winner) return;
+    if (game.winner || modelThinking) return;
+    if (!isHumanTurn()) return;
     if (color !== game.currentPlayer) return;
     if (selected && selected.kind === 'tray' && selected.pieceId === pieceId) {
       selected = null;
@@ -140,10 +220,10 @@
   }
 
   function onCellClick(cell) {
-    if (game.winner) return;
+    if (game.winner || modelThinking) return;
 
     if (!selected) {
-      if (isOwnTopPiece(cell)) {
+      if (isOwnTopPiece(cell) && isHumanTurn()) {
         selected = { kind: 'board', cell };
         render();
       }
@@ -162,7 +242,7 @@
       return;
     }
 
-    if (isOwnTopPiece(cell)) {
+    if (isOwnTopPiece(cell) && isHumanTurn()) {
       selected = { kind: 'board', cell };
       render();
       return;
@@ -181,6 +261,7 @@
     if (res.ok) {
       selected = null;
       render();
+      maybeFireModelMove();
     } else {
       flashCell(cell);
     }
@@ -190,22 +271,129 @@
     const node = boardEl.querySelector(`.cell[data-cell="${cell}"]`);
     if (!node) return;
     node.classList.remove('flash');
-    void node.offsetWidth; // reflow to restart animation
+    void node.offsetWidth;
     node.classList.add('flash');
   }
 
+  // ---- model-mode network calls ----
+
+  function applyServerAction(action) {
+    if (action.kind === 'place') {
+      const sizeName = SIZE_ORDER[action.size];
+      const piece = game.tray(game.currentPlayer).find(p => p.size === sizeName);
+      if (!piece) {
+        showError('Model returned a place action with no available piece');
+        return false;
+      }
+      const res = game.place(piece.id, action.to);
+      if (!res.ok) {
+        showError(`Model move rejected: ${res.reason}`);
+        return false;
+      }
+    } else if (action.kind === 'move') {
+      const res = game.move(action.from_, action.to);
+      if (!res.ok) {
+        showError(`Model move rejected: ${res.reason}`);
+        return false;
+      }
+    } else {
+      showError(`Unknown action kind: ${action.kind}`);
+      return false;
+    }
+    return true;
+  }
+
+  function showError(msg) {
+    lastError = msg;
+    modelAvailable = false;  // disable model mode for the rest of the session
+    setTimeout(() => { if (lastError === msg) { lastError = null; render(); } }, 6000);
+    render();
+  }
+
+  async function checkHealth() {
+    try {
+      const r = await fetch('/api/health');
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      const body = await r.json();
+      modelAvailable = !!body.model_loaded;
+    } catch (e) {
+      modelAvailable = false;
+    }
+    render();
+    if (isModelTurn()) maybeFireModelMove();
+  }
+
+  async function maybeFireModelMove() {
+    if (!isModelTurn()) return;
+    if (modelThinking) return;
+    modelThinking = true;
+    const seq = ++requestSeq;
+    render();
+    try {
+      const r = await fetch('/api/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          state: game.serializeState(),
+          modelColor: COLOR_INT[game.currentPlayer],
+        }),
+      });
+      if (seq !== requestSeq) return;
+      if (!r.ok) {
+        const txt = await r.text();
+        throw new Error(`status ${r.status}: ${txt.slice(0, 100)}`);
+      }
+      const body = await r.json();
+      if (seq !== requestSeq) return;
+      if (!applyServerAction(body.action)) return;
+    } catch (e) {
+      if (seq !== requestSeq) return;
+      showError(`Model error: ${e.message}`);
+    } finally {
+      if (seq === requestSeq) {
+        modelThinking = false;
+        render();
+      }
+    }
+  }
+
+  function restartGame() {
+    game = GobbletGame.create();
+    selected = null;
+    lastError = null;
+    requestSeq++;
+    render();
+    if (isModelTurn()) maybeFireModelMove();
+  }
+
+  // ---- event wiring ----
+
+  modeSelect.addEventListener('change', () => {
+    if (modeSelect.value === mode) return;
+    mode = modeSelect.value;
+    restartGame();
+  });
+
+  colorSelect.addEventListener('change', () => {
+    if (colorSelect.value === humanColor) return;
+    humanColor = colorSelect.value;
+    restartGame();
+  });
+
   undoBtn.addEventListener('click', () => {
+    if (modelThinking) return;
     if (!game.canUndo()) return;
     game.undo();
     selected = null;
     render();
+    if (isModelTurn()) maybeFireModelMove();
   });
 
   restartBtn.addEventListener('click', () => {
-    game = GobbletGame.create();
-    selected = null;
-    render();
+    restartGame();
   });
 
+  // initial render + health check
   render();
+  checkHealth();
 })();

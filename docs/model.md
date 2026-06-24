@@ -57,6 +57,7 @@ All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `te
 | `train.py` | 335 | `Trainer`: the main loop (self-play → train → eval → checkpoint). Handles resume, logging (stdout + TensorBoard), LR step-down, Gate-C. Entry point: `python -m gobblet.train`. |
 | `config.py` | 113 | All hyperparameters in one `Config` dataclass. `Config.for_smoke()` for fast tests. |
 | `play.py` | 139 | Interactive CLI: human vs model. Entry point: `python -m gobblet.play --ckpt best.pt`. |
+| `webui.py` | 200+ | FastAPI server that hosts the web UI and exposes `/api/move` / `/api/health`. Entry point: `python -m gobblet.webui --ckpt best.pt`. See `docs/ui.md`. |
 
 ## Tests
 
@@ -71,8 +72,9 @@ All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `te
 | `test_selfplay_smoke.py` | 9 | Replay buffer + self-play sample validity |
 | `test_arena.py` | 12 | Baselines, arena matches, Elo |
 | `test_train.py` | 3 | Full iteration smoke, resume, Gate-C check |
+| `test_webui.py` | 12 | FastAPI server: /api/health, /api/move, static files, validation |
 
-JavaScript tests for the original web UI live in `test/*.test.js`.
+JavaScript tests for the web UI live in `test/*.test.js` (logic) and `test/ui.smoke.test.js` (jsdom integration; covers both manual and model-mode wiring).
 
 ## Entry points
 
@@ -80,7 +82,8 @@ JavaScript tests for the original web UI live in `test/*.test.js`.
 python -m gobblet.train --run-dir runs/gobblet-v1 --max-iters 20   # train
 python -m gobblet.train --resume runs/gobblet-v1                     # continue
 python -m gobblet.arena --ckpt runs/gobblet-v1/best.pt              # evaluate
-python -m gobblet.play --ckpt runs/gobblet-v1/best.pt               # play
+python -m gobblet.play --ckpt runs/gobblet-v1/best.pt               # play (CLI)
+python -m gobblet.webui --ckpt runs/gobblet-v1/best.pt              # play (browser)
 ```
 
-See `docs/train.md` for the full command-line guide.
+See `docs/train.md` for the full command-line guide and `docs/ui.md` for the web UI.

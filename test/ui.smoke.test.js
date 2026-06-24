@@ -4,19 +4,44 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
-function loadDom() {
+function loadDom(opts = {}) {
   const root = path.join(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
     .replace(/<script src="game\.js"><\/script>\s*/, '')
     .replace(/<script src="app\.js"><\/script>\s*/, '');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { window } = dom;
+  if (opts.fetch) window.fetch = opts.fetch;
   for (const file of ['game.js', 'app.js']) {
     const s = window.document.createElement('script');
     s.textContent = fs.readFileSync(path.join(root, file), 'utf8');
     window.document.body.appendChild(s);
   }
   return window;
+}
+
+async function flush() {
+  await new Promise(r => setTimeout(r, 0));
+  await new Promise(r => setTimeout(r, 0));
+}
+
+function defaultHealth() {
+  return { ok: true, status: 200, json: async () => ({ ok: true, model_loaded: true, sims: 4, device: 'cpu', model_path: 'test' }) };
+}
+
+function makeFetchMock({ health = defaultHealth(), move = defaultMove() } = {}) {
+  const requests = [];
+  const fn = async (url, opts) => {
+    requests.push({ url, opts });
+    if (url === '/api/health') return health;
+    if (url === '/api/move') return move;
+    return { ok: false, status: 404, text: async () => 'not found' };
+  };
+  return { requests, fn };
+}
+
+function defaultMove() {
+  return { ok: true, status: 200, json: async () => ({ action: { kind: 'place', to: 4, size: 1 } }) };
 }
 
 const R_TO_SIZE = { '20': 'S', '32': 'M', '44': 'L' };
@@ -95,7 +120,7 @@ test('UI: full game via clicks — red wins row 0 S-M-L; banner shows, board loc
   const banner = w.document.getElementById('banner');
   assert.ok(!banner.classList.contains('hidden'));
   assert.match(banner.textContent, /Red wins/);
-  assert.strictEqual(w.document.getElementById('turn-label').textContent, 'Red wins');
+  assert.strictEqual(w.document.getElementById('turn-label').textContent, "Red wins!");
 
   // winning cells 0,1,2 have 'winning' class
   for (const c of [0, 1, 2]) assert.ok(cellEl(w, c).classList.contains('winning'), `cell ${c} should be winning`);
@@ -165,4 +190,158 @@ test('UI: invalid destination click flashes and keeps selection (no state change
   assert.ok(w.document.querySelector('.tray-slot.selected'), 'selection retained after invalid click');
   // turn unchanged
   assert.match(w.document.getElementById('turn-label').textContent, /Red/);
+});
+
+// ============== model mode ==============
+
+test('UI: mode toggle exists, defaults to manual, color picker is hidden', () => {
+  const w = loadDom();
+  const modeSelect = w.document.getElementById('mode-select');
+  assert.ok(modeSelect, 'mode-select should exist');
+  assert.strictEqual(modeSelect.value, 'manual');
+  const modelOpt = modeSelect.querySelector('option[value="model"]');
+  assert.ok(modelOpt);
+  // without a successful health check, model option is disabled
+  assert.ok(modelOpt.disabled, 'model option disabled until health check');
+  const colorPicker = w.document.getElementById('color-picker');
+  assert.ok(colorPicker);
+  assert.ok(colorPicker.classList.contains('hidden'), 'color picker hidden in manual mode');
+});
+
+test('UI: health check enables the model option; switching to model mode reveals the color picker and restarts', async () => {
+  const mock = makeFetchMock();
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  const modeSelect = w.document.getElementById('mode-select');
+  const modelOpt = modeSelect.querySelector('option[value="model"]');
+  assert.ok(!modelOpt.disabled, 'model option should be enabled after health check');
+
+  // make a move in manual mode first, to verify it gets reset
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  assert.strictEqual(traySlots(w, 'red').length, 5);
+
+  // switch to model mode
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  const colorPicker = w.document.getElementById('color-picker');
+  assert.ok(!colorPicker.classList.contains('hidden'), 'color picker visible after switching to model mode');
+  assert.strictEqual(traySlots(w, 'red').length, 6, 'red tray reset on mode switch');
+  assert.strictEqual(cellEl(w, 0).querySelector('circle'), null, 'cell 0 reset on mode switch');
+});
+
+test('UI: in model mode (you=red), after your move the model fetches and applies the response', async () => {
+  const mock = makeFetchMock();
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  // switch to model mode (you=red, so model=blue, blue moves second)
+  const modeSelect = w.document.getElementById('mode-select');
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  // human (red) makes a move
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  await flush();
+
+  // /api/move should have been called
+  const moveReqs = mock.requests.filter(r => r.url === '/api/move');
+  assert.strictEqual(moveReqs.length, 1, 'one /api/move call after human move');
+  // verify the request body includes state and modelColor
+  const body = JSON.parse(moveReqs[0].opts.body);
+  assert.strictEqual(body.modelColor, 1, 'modelColor=1 (blue)');
+  assert.strictEqual(body.state.player, 1, 'state.player=1 (blue)');
+
+  // the mock returns place M at cell 4 — verify the board reflects that
+  assert.strictEqual(cellTopColor(w, 4), 'blue', 'model placed M at cell 4');
+  assert.match(w.document.getElementById('turn-label').textContent, /Red/);
+});
+
+test('UI: in model mode (you=blue), the model moves first', async () => {
+  const mock = makeFetchMock();
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  // switch to model mode and pick blue
+  const modeSelect = w.document.getElementById('mode-select');
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  const colorSelect = w.document.getElementById('color-select');
+  colorSelect.value = 'blue';
+  colorSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  const moveReqs = mock.requests.filter(r => r.url === '/api/move');
+  assert.strictEqual(moveReqs.length, 1, 'model moved first (you=blue)');
+  const body = JSON.parse(moveReqs[0].opts.body);
+  assert.strictEqual(body.modelColor, 0, 'modelColor=0 (red)');
+  assert.strictEqual(cellTopColor(w, 4), 'red', 'red M placed at cell 4');
+});
+
+test('UI: undo during model play re-triggers the model', async () => {
+  const mock = makeFetchMock();
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  const modeSelect = w.document.getElementById('mode-select');
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  await flush();
+
+  const before = mock.requests.filter(r => r.url === '/api/move').length;
+  assert.ok(before >= 1, 'model moved at least once');
+
+  // undo: should pop the model's move, putting us back on the model's turn
+  w.document.getElementById('undo-btn').click();
+  await flush();
+
+  const after = mock.requests.filter(r => r.url === '/api/move').length;
+  assert.ok(after > before, 'model re-fired after undo');
+});
+
+test('UI: a 5xx from /api/move shows an error and disables the model option', async () => {
+  const mock = makeFetchMock({
+    move: { ok: false, status: 500, text: async () => 'server error' },
+  });
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  const modeSelect = w.document.getElementById('mode-select');
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  await flush();
+
+  // banner shows the error
+  const banner = w.document.getElementById('banner');
+  assert.ok(!banner.classList.contains('hidden'), 'banner visible on error');
+  assert.match(banner.textContent, /Model error/);
+
+  // model option is disabled
+  const modelOpt = modeSelect.querySelector('option[value="model"]');
+  assert.ok(modelOpt.disabled, 'model option disabled after error');
+});
+
+test('UI: server down on initial load disables the model option', async () => {
+  const mock = makeFetchMock({ health: { ok: false, status: 500 } });
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  const modeSelect = w.document.getElementById('mode-select');
+  const modelOpt = modeSelect.querySelector('option[value="model"]');
+  assert.ok(modelOpt.disabled, 'model option disabled when health fails');
 });

@@ -207,6 +207,26 @@
       legalDestinationsForBoardCell(cell) { return legalDestinationsForBoardCell(cell); },
       legalDestinationsForTrayPiece(pieceId) { return legalDestinationsForTrayPiece(pieceId); },
 
+      serializeState() {
+        const COLOR_INT = { red: 0, blue: 1 };
+        const SIZE_INT = { S: 0, M: 1, L: 2 };
+        const board = state.board.map(stack => stack.map(p => [COLOR_INT[p.color], SIZE_INT[p.size]]));
+        const trayCounts = [0, 0, 0, 0, 0, 0];
+        for (const color of COLORS) {
+          for (const p of state.trays[color]) {
+            trayCounts[COLOR_INT[color] * 3 + SIZE_INT[p.size]] += 1;
+          }
+        }
+        return {
+          board,
+          trays: trayCounts,
+          player: COLOR_INT[state.currentPlayer],
+          ply: state.history.length,
+          winner: state.winner === null ? null : COLOR_INT[state.winner],
+          is_draw: false,
+        };
+      },
+
       place(pieceId, cell) {
         if (state.winner) return { ok: false, reason: 'game is over' };
         if (cell < 0 || cell > 8) return { ok: false, reason: 'cell out of range' };

@@ -15,12 +15,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "httpx"]
 
 [project.scripts]
 gobblet-train = "gobblet.train:main"
 gobblet-play = "gobblet.play:main"
 gobblet-arena = "gobblet.arena:main"
+gobblet-webui = "gobblet.webui:main"
 
 [tool.setuptools.packages.find]
 include = ["gobblet*"]
