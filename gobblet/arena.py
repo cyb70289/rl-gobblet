@@ -192,3 +192,7 @@ def main():
     draws = sum(1 for r in results if r == 0)
     print(f"MCTS vs {args.opponent}: {wins}W / {draws}D / {losses}L "
           f"(win rate: {(wins + 0.5*draws)/args.n_games:.1%})")
+
+
+if __name__ == "__main__":
+    main()
