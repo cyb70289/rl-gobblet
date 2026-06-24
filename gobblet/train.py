@@ -160,10 +160,14 @@ class Trainer:
 
         return policy_loss.item(), value_loss.item()
 
-    def _eval_prev_vs_new(self) -> float:
-        """Arena: current net vs previous best. Returns win-rate from current's perspective."""
+    def _eval_prev_vs_new(self) -> tuple[float, bool]:
+        """Arena: current net vs previous best.
+
+        Returns (win_rate, was_evaluated). was_evaluated is False when there
+        is no previous checkpoint to compare against (first iteration).
+        """
         if self.prev_best_state is None:
-            return 1.0  # auto-accept first iteration
+            return 0.0, False
 
         prev_net = GobbletNet(self.cfg.net).to(self.device)
         prev_net.load_state_dict(self.prev_best_state)
@@ -175,7 +179,7 @@ class Trainer:
         results = arena.play_match(cur_player, prev_player,
                                    n_games=self.cfg.eval.prev_vs_new_games)
         wr = (sum(r for r in results) / len(results) + 1) / 2
-        return wr
+        return wr, True
 
     def _eval_gate_c(self) -> tuple[float, float]:
         """Gate C: vs random and vs greedy. Returns (random_wr, greedy_wr)."""
@@ -237,28 +241,40 @@ class Trainer:
 
             # 4. Evaluation: prev vs new
             t0 = time.time()
-            wr = self._eval_prev_vs_new()
+            wr, evaluated = self._eval_prev_vs_new()
             eval_time = time.time() - t0
-            self._log(f"[eval] vs previous: win-rate={wr:.1%} in {eval_time:.1f}s")
-            self.writer.add_scalar("eval/winrate_vs_prev", wr, self.iteration)
 
-            if wr >= self.cfg.eval.accept_threshold:
+            if not evaluated:
+                # First iteration: no previous checkpoint to compare.
+                # Save as baseline best, but don't claim a win-rate.
+                self._log(f"[eval] first iteration, saved as baseline "
+                          f"(no previous to compare) in {eval_time:.1f}s")
                 self.accepted_iter = self.iteration
                 self.prev_best_state = {k: v.clone() for k, v in self.net.state_dict().items()}
                 self._save_best()
                 self.plateau_count = 0
-                self._log(f"[eval] checkpoint ACCEPTED as best")
+                self.writer.add_scalar("eval/winrate_vs_prev", 0.5, self.iteration)
             else:
-                self.plateau_count += 1
-                self._log(f"[eval] checkpoint REJECTED (plateau_count={self.plateau_count})")
-                # LR step-down on plateau
-                if self.plateau_count >= 2:
-                    old_lr = self.optimizer.param_groups[0]["lr"]
-                    new_lr = max(old_lr / 3.0, 1e-5)
-                    if new_lr < old_lr:
-                        self.optimizer.param_groups[0]["lr"] = new_lr
-                        self._log(f"[lr] step down {old_lr:.1e} -> {new_lr:.1e}")
-                        self.plateau_count = 0
+                self._log(f"[eval] vs previous: win-rate={wr:.1%} in {eval_time:.1f}s")
+                self.writer.add_scalar("eval/winrate_vs_prev", wr, self.iteration)
+
+                if wr >= self.cfg.eval.accept_threshold:
+                    self.accepted_iter = self.iteration
+                    self.prev_best_state = {k: v.clone() for k, v in self.net.state_dict().items()}
+                    self._save_best()
+                    self.plateau_count = 0
+                    self._log(f"[eval] checkpoint ACCEPTED as best")
+                else:
+                    self.plateau_count += 1
+                    self._log(f"[eval] checkpoint REJECTED (plateau_count={self.plateau_count})")
+                    # LR step-down on plateau
+                    if self.plateau_count >= 2:
+                        old_lr = self.optimizer.param_groups[0]["lr"]
+                        new_lr = max(old_lr / 3.0, 1e-5)
+                        if new_lr < old_lr:
+                            self.optimizer.param_groups[0]["lr"] = new_lr
+                            self._log(f"[lr] step down {old_lr:.1e} -> {new_lr:.1e}")
+                            self.plateau_count = 0
 
             # Elo: simple relative from accepted checkpoints
             self.elo_history.append((self.iteration, 1000 + self.accepted_iter * 50))
