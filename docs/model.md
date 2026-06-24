@@ -43,7 +43,7 @@ Each **iteration**:
 
 ## Source files
 
-All source lives in `gobblet/`. Tests in `tests/`.
+All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `test/`.
 
 | File | Lines | Role |
 |------|-------|------|
@@ -60,7 +60,7 @@ All source lives in `gobblet/`. Tests in `tests/`.
 
 ## Tests
 
-`tests/` — 110 tests, all passing. Key suites:
+`test/gobblet/` — 100 tests, all passing. Key suites:
 
 | File | Tests | Covers |
 |------|-------|--------|
@@ -71,6 +71,8 @@ All source lives in `gobblet/`. Tests in `tests/`.
 | `test_selfplay_smoke.py` | 9 | Replay buffer + self-play sample validity |
 | `test_arena.py` | 12 | Baselines, arena matches, Elo |
 | `test_train.py` | 3 | Full iteration smoke, resume, Gate-C check |
+
+JavaScript tests for the original web UI live in `test/*.test.js`.
 
 ## Entry points
 

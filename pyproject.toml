@@ -26,5 +26,5 @@ gobblet-arena = "gobblet.arena:main"
 include = ["gobblet*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["test/gobblet"]
 python_files = ["test_*.py"]
