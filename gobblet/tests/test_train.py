@@ -50,23 +50,3 @@ def test_trainer_resume(tmp_path):
     import json
     state = json.loads((Path(cfg.run_dir) / "state.json").read_text())
     assert state["iteration"] >= 2
-
-
-def test_trainer_gate_c_check(tmp_path):
-    """Gate C check should report results vs random and greedy baselines."""
-    cfg = Config.for_smoke()
-    cfg.max_iters = 1
-    cfg.run_dir = str(tmp_path / "test_gatec")
-    cfg.eval.prev_vs_new_games = 4
-    cfg.eval.gate_c_random_games = 4
-    cfg.eval.gate_c_greedy_games = 4
-    cfg.eval.milestone_every = 1
-
-    trainer = Trainer(cfg)
-    trainer.run()
-
-    # After milestone eval, state.json should have gate-C results
-    import json
-    state = json.loads((Path(cfg.run_dir) / "state.json").read_text())
-    # Gate-C results should be recorded (even if not passing)
-    assert "gate_c_history" in state

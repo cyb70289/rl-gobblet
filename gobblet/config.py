@@ -52,7 +52,6 @@ class EvalConfig:
     gate_c_random_games: int = 100
     gate_c_greedy_games: int = 200
     gate_c_greedy_winrate: float = 0.70
-    milestone_every: int = 5          # run gate-C probes every N iters
 
 
 @dataclass
@@ -64,7 +63,6 @@ class Config:
     eval: EvalConfig = field(default_factory=EvalConfig)
     run_dir: str = "runs/default"
     seed: int = 0
-    # Gate-C target iteration (rough): stop after this if C met
     max_iters: int = 20
     time_budget_hours: float = 24.0
 

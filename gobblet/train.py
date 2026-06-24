@@ -181,17 +181,6 @@ class Trainer:
         wr = (sum(r for r in results) / len(results) + 1) / 2
         return wr, True
 
-    def _eval_gate_c(self) -> tuple[float, float]:
-        """Gate C: vs random and vs greedy. Returns (random_wr, greedy_wr)."""
-        arena = Arena(seed=42)
-        cur_player = MCTSPlayer(self.net, self.cfg.mcts, temperature=0.0)
-        random_p = RandomPlayer()
-        greedy_p = Greedy1PlyPlayer()
-        r_wr = arena.winrate(cur_player, random_p, n_games=self.cfg.eval.gate_c_random_games)
-        cur_player.reset()
-        g_wr = arena.winrate(cur_player, greedy_p, n_games=self.cfg.eval.gate_c_greedy_games)
-        return r_wr, g_wr
-
     def run(self) -> None:
         """Main training loop."""
         self.writer = SummaryWriter(str(self.tb_dir))
@@ -279,23 +268,6 @@ class Trainer:
             # Elo: simple relative from accepted checkpoints
             self.elo_history.append((self.iteration, 1000 + self.accepted_iter * 50))
             self.writer.add_scalar("eval/elo", self.elo_history[-1][1], self.iteration)
-
-            # 5. Gate C milestone check
-            if (self.iteration + 1) % self.cfg.eval.milestone_every == 0:
-                t0 = time.time()
-                r_wr, g_wr = self._eval_gate_c()
-                gc_time = time.time() - t0
-                self._log(f"[gate-C] vs random={r_wr:.1%} vs greedy={g_wr:.1%} "
-                          f"in {gc_time:.1f}s")
-                self.gate_c_history.append((self.iteration, r_wr, g_wr))
-                self.writer.add_scalar("gate_c/random_winrate", r_wr, self.iteration)
-                self.writer.add_scalar("gate_c/greedy_winrate", g_wr, self.iteration)
-
-                if (r_wr >= 0.99 and g_wr >= self.cfg.eval.gate_c_greedy_winrate):
-                    self._log(f"[gate-C] PASSED! Stopping.")
-                    self.iteration += 1
-                    self._save_state()
-                    break
 
             self.iteration += 1
             self._save_state()

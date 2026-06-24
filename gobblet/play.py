@@ -1,4 +1,4 @@
-"""Interactive CLI play mode: human vs trained model (Gate D)."""
+"""Interactive CLI play mode: human vs trained model."""
 from __future__ import annotations
 
 import argparse

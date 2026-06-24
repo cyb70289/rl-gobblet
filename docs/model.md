@@ -17,8 +17,6 @@ Each **iteration**:
    policy (cross-entropy) + value (MSE) heads.
 3. **Eval**: arena match — new checkpoint vs previous best. Accept if
    win-rate ≥ 55%; save as `best.pt`.
-4. **Gate-C probe** (every 5 iters): vs random and greedy-1-ply baselines.
-   Stop when win-rate vs random ≥ 99% and vs greedy ≥ 70%.
 
 ## Key design decisions
 
@@ -53,7 +51,7 @@ All source lives in `gobblet/`. Python tests in `gobblet/tests/`. JS tests in `u
 | `selfplay.py` | `SelfPlayRunner`: runs N concurrent self-play games with batched MCTS, records `(state, policy, value)` samples. Temperature schedule τ=1→0. |
 | `replay.py` | `ReplayBuffer`: 50k FIFO buffer with `sample(batch_size)` and `save`/`load` for resume. |
 | `arena.py` | `RandomPlayer`, `Greedy1PlyPlayer`, `MCTSPlayer` (wraps MCTS for eval). `Arena.play_match` with sides swapped. `compute_elo` from match chains. |
-| `train.py` | `Trainer`: the main loop (self-play → train → eval → checkpoint). Handles resume, logging (stdout + TensorBoard), LR step-down, Gate-C. Entry point: `python -m gobblet.train`. |
+| `train.py` | `Trainer`: the main loop (self-play → train → eval → checkpoint). Handles resume, logging (stdout + TensorBoard), LR step-down. Entry point: `python -m gobblet.train`. |
 | `config.py` | All hyperparameters in one `Config` dataclass. `Config.for_smoke()` for fast tests. |
 | `play.py` | Interactive CLI: human vs model. Entry point: `python -m gobblet.play --ckpt best.pt`. |
 | `webui.py` | FastAPI server that hosts the web UI and exposes `/api/move` / `/api/health`. Entry point: `python -m gobblet.webui --ckpt best.pt`. See `docs/ui.md`. |
@@ -70,7 +68,7 @@ All source lives in `gobblet/`. Python tests in `gobblet/tests/`. JS tests in `u
 | `test_mcts.py` | Visit counts, terminal handling, tree reuse, temperature |
 | `test_selfplay_smoke.py` | 9 | Replay buffer + self-play sample validity |
 | `test_arena.py` | Baselines, arena matches, Elo |
-| `test_train.py` | Full iteration smoke, resume, Gate-C check |
+| `test_train.py` | Full iteration smoke, resume |
 | `test_webui.py` | FastAPI server: /api/health, /api/move, static files, validation |
 
 JavaScript tests for the web UI live in `ui/tests/*.test.js` (logic) and `ui/tests/ui.smoke.test.js` (jsdom integration; covers both manual and model-mode wiring).

@@ -35,7 +35,7 @@ Options:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--run-dir DIR` | `runs/default` | output directory (checkpoints, logs, TensorBoard) |
-| `--max-iters N` | 20 | stop after N iterations or when Gate C passes |
+| `--max-iters N` | 20 | stop after N iterations |
 | `--resume DIR` | — | resume an interrupted run from a run directory |
 | `--device cuda\|cpu` | auto | force a device (auto-detects CUDA) |
 | `--seed N` | 0 | RNG seed |
@@ -54,7 +54,7 @@ runs/gobblet-v1/
   ...
   best.pt            # copy of the latest accepted checkpoint
   replay.pt          # 50k-sample FIFO replay buffer
-  state.json         # iteration count, Elo history, Gate-C history, LR, timing
+  state.json         # iteration count, Elo history, LR, timing
   train.log          # one line per phase (self-play / train / eval)
   tensorboard/       # scalars: losses, win-rates, Elo, lr
 ```
@@ -78,7 +78,6 @@ Example lines:
 [train] 1000 steps in 5.3s (policy_loss=1.42 value_loss=0.09)
 [eval] vs previous: win-rate=61.0% in 0.4s
 [eval] checkpoint ACCEPTED as best
-[gate-C] vs random=100.0% vs greedy=72.0% in 12.3s
 ```
 
 ### TensorBoard
@@ -126,7 +125,7 @@ python -m gobblet.train --resume runs/gobblet-v1 --max-iters 3
 Run the current best model against a baseline (outside the training loop):
 
 ```bash
-# vs greedy-1-ply (the Gate C opponent)
+# vs greedy-1-ply
 python -m gobblet.arena --ckpt runs/gobblet-v1/best.pt --opponent greedy --n-games 200
 
 # vs random
@@ -135,13 +134,9 @@ python -m gobblet.arena --ckpt runs/gobblet-v1/best.pt --opponent random --n-gam
 
 Output: `MCTS vs greedy: 146W / 8D / 46L (win rate: 75.0%)`.
 
-Gate C passes when win-rate vs random ≥ 99% and vs greedy ≥ 70% over 200 games.
-The training loop checks this automatically every 5 iterations and stops when
-met; `arena` lets you re-check any checkpoint on demand.
-
 ## Play against the model
 
-Interactive CLI game (Gate D):
+Interactive CLI game:
 
 ```bash
 python -m gobblet.play --ckpt runs/gobblet-v1/best.pt
