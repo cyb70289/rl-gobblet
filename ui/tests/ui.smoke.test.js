@@ -111,7 +111,7 @@ test('UI initial render: Red to move, empty board, 6 slots per tray, undo disabl
   assert.ok(w.document.getElementById('red-tray').classList.contains('active'));
 });
 
-test('UI: clicking a red S tray slot selects it; clicking cell 0 places it and passes turn to blue', () => {
+test('UI: clicking a red S tray slot selects it; clicking cell 0 places it and passes turn to blue', async () => {
   const w = loadDom();
   const slot = findSlot(w, 'red', 'S');
   slot.click();
@@ -122,6 +122,7 @@ test('UI: clicking a red S tray slot selects it; clicking cell 0 places it and p
   assert.ok(cellEl(w, 0).classList.contains('valid'));
 
   cellEl(w, 0).click();
+  await flush();
   assert.strictEqual(cellTopColor(w, 0), 'red');
   assert.strictEqual(traySlots(w, 'red').length, 5, 'red tray should drop to 5');
   assert.match(w.document.getElementById('turn-label').textContent, /Blue/);
@@ -129,14 +130,14 @@ test('UI: clicking a red S tray slot selects it; clicking cell 0 places it and p
   assert.strictEqual(w.document.getElementById('undo-btn').disabled, false);
 });
 
-test('UI: full game via clicks — red wins row 0 S-M-L; banner shows, board locks, winning cells pulse', () => {
+test('UI: full game via clicks — red wins row 0 S-M-L; banner shows, board locks, winning cells pulse', async () => {
   const w = loadDom();
   // red S@0, blue S@3, red M@1, blue S@5, red L@2 -> red wins
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();
-  findSlot(w, 'red', 'M').click();   cellEl(w, 1).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 5).click();
-  findSlot(w, 'red', 'L').click();   cellEl(w, 2).click();
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();   await flush();
+  findSlot(w, 'red', 'M').click();   cellEl(w, 1).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 5).click();   await flush();
+  findSlot(w, 'red', 'L').click();   cellEl(w, 2).click();   await flush();
 
   const banner = w.document.getElementById('banner');
   assert.ok(!banner.classList.contains('hidden'));
@@ -150,16 +151,17 @@ test('UI: full game via clicks — red wins row 0 S-M-L; banner shows, board loc
   // board locked: clicking a blue tray piece does nothing
   const blueSlotsBefore = traySlots(w, 'blue').length;
   findSlot(w, 'blue', 'L').click();
+  await flush();
   assert.strictEqual(traySlots(w, 'blue').length, blueSlotsBefore, 'no action after win');
 });
 
-test('UI: undo reverts the winning move (banner hidden, game unlocked, turn back to red)', () => {
+test('UI: undo reverts the winning move (banner hidden, game unlocked, turn back to red)', async () => {
   const w = loadDom();
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();
-  findSlot(w, 'red', 'M').click();   cellEl(w, 1).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 5).click();
-  findSlot(w, 'red', 'L').click();   cellEl(w, 2).click();
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();   await flush();
+  findSlot(w, 'red', 'M').click();   cellEl(w, 1).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 5).click();   await flush();
+  findSlot(w, 'red', 'L').click();   cellEl(w, 2).click();   await flush();
   assert.ok(!w.document.getElementById('banner').classList.contains('hidden'));
 
   w.document.getElementById('undo-btn').click();
@@ -169,10 +171,10 @@ test('UI: undo reverts the winning move (banner hidden, game unlocked, turn back
   assert.ok(w.document.getElementById('undo-btn').disabled === false, 'still more history to undo');
 });
 
-test('UI: restart resets to the initial state', () => {
+test('UI: restart resets to the initial state', async () => {
   const w = loadDom();
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();   await flush();
   w.document.getElementById('restart-btn').click();
 
   assert.strictEqual(traySlots(w, 'red').length, 6);
@@ -183,25 +185,26 @@ test('UI: restart resets to the initial state', () => {
   assert.strictEqual(w.document.getElementById('banner').classList.contains('hidden'), true);
 });
 
-test('UI: move flow — place red S@0, blue S@4, then red moves 0->1; cell 0 empties, cell 1 red S', () => {
+test('UI: move flow — place red S@0, blue S@4, then red moves 0->1; cell 0 empties, cell 1 red S', async () => {
   const w = loadDom();
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 4).click();
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 4).click();   await flush();
   // red's turn: click own top piece at cell 0 to select for moving
   cellEl(w, 0).click();
   assert.ok(cellEl(w, 0).classList.contains('selected'));
   assert.ok(cellEl(w, 1).classList.contains('valid'), 'cell 1 should be a valid move destination');
   assert.ok(!cellEl(w, 4).classList.contains('valid'), 'cell 4 (same-size blue S) should NOT be valid');
   cellEl(w, 1).click();
+  await flush();
   assert.strictEqual(cellEl(w, 0).querySelector('circle'), null, 'cell 0 now empty');
   assert.strictEqual(cellTopColor(w, 1), 'red');
   assert.match(w.document.getElementById('turn-label').textContent, /Blue/);
 });
 
-test('UI: invalid destination click flashes and keeps selection (no state change)', () => {
+test('UI: invalid destination click flashes and keeps selection (no state change)', async () => {
   const w = loadDom();
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 4).click();
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 4).click();   await flush();
   // red selects S from tray again, tries to place on cell 4 (blue S same size -> invalid)
   findSlot(w, 'red', 'S').click();
   const cell4 = cellEl(w, 4);
@@ -241,6 +244,7 @@ test('UI: health check enables the model option; switching to model mode reveals
   // make a move in manual mode first, to verify it gets reset
   findSlot(w, 'red', 'S').click();
   cellEl(w, 0).click();
+  await flush();
   assert.strictEqual(traySlots(w, 'red').length, 5);
 
   // switch to model mode
@@ -390,16 +394,17 @@ test('UI: undo in model mode pops two plies and does not fire the model', async 
 test('UI: undo in manual mode still pops one ply', async () => {
   const w = loadDom();
   // red S@0, blue S@3
-  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
-  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();
-  // undo: should pop the blue S@3 move only
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();   await flush();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();   await flush();
+  // undo: should pop the blue S@3 move only. Turn reverts to blue's turn
+  // (the turn that was about to be played when blue moved).
   w.document.getElementById('undo-btn').click();
   await flush();
   // cell 0 has red S; cell 3 empty; blue tray back to 6
   assert.strictEqual(cellTopColor(w, 0), 'red');
   assert.strictEqual(cellEl(w, 3).querySelector('circle'), null, 'cell 3 should be empty');
   assert.strictEqual(traySlots(w, 'blue').length, 6, 'blue tray should be full after one undo');
-  assert.match(w.document.getElementById('turn-label').textContent, /Red/);
+  assert.match(w.document.getElementById('turn-label').textContent, /Blue/);
 });
 
 test('UI: source element receives the .shine class during a click', async () => {
@@ -411,8 +416,8 @@ test('UI: source element receives the .shine class during a click', async () => 
   // The render() inside executeAction creates a fresh DOM. Query by class.
   const shiningSlot = w.document.querySelector('.tray-slot.shine');
   assert.ok(shiningSlot, 'a tray slot should have .shine class right after click');
-  // wait for the animation to complete
-  await flush();
+  // wait for both shines to finish (2 * 50ms + buffer)
+  await new Promise(r => setTimeout(r, 250));
   assert.strictEqual(
     w.document.querySelector('.tray-slot.shine'),
     null,

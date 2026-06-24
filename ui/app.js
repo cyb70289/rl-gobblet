@@ -10,6 +10,7 @@
   let humanColor = 'red';         // 'red' | 'blue' (which color the human plays in model mode)
   let modelAvailable = false;     // /api/health result
   let modelThinking = false;      // /api/move request in flight
+  let animating = false;          // shine animation in progress
   let lastError = null;           // most recent model error message (banner)
   let requestSeq = 0;             // discard stale /api/move responses
 
@@ -19,6 +20,10 @@
   const DARK = { red: [8, 55, 28], blue: [205, 55, 26] };
   const COLOR_INT = { red: 0, blue: 1 };
   const INT_COLOR = ['red', 'blue'];
+
+  const ANIM = (typeof window !== 'undefined' && window.__gobbletAnim) || { shineMs: 1000 };
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   function shade(color, depthFromTop) {
     const b = BRIGHT[color], d = DARK[color];
@@ -176,11 +181,11 @@
     renderTray(redTrayEl, 'red');
     renderBoard(validSet, winningSet);
 
-    undoBtn.disabled = !game.canUndo() || modelThinking;
+    undoBtn.disabled = !game.canUndo() || modelThinking || animating;
 
     // mode controls
     colorPicker.classList.toggle('hidden', mode !== 'model');
-    const modeSelectDisabled = modelThinking;
+    const modeSelectDisabled = modelThinking || animating;
     modeSelect.disabled = modeSelectDisabled;
     colorSelect.disabled = modeSelectDisabled || mode !== 'model';
     modelStatus.textContent = modelStatusText();
@@ -208,7 +213,7 @@
   }
 
   function onTrayPieceClick(color, pieceId) {
-    if (game.winner || modelThinking) return;
+    if (game.winner || modelThinking || animating) return;
     if (!isHumanTurn()) return;
     if (color !== game.currentPlayer) return;
     if (selected && selected.kind === 'tray' && selected.pieceId === pieceId) {
@@ -220,7 +225,7 @@
   }
 
   function onCellClick(cell) {
-    if (game.winner || modelThinking) return;
+    if (game.winner || modelThinking || animating) return;
 
     if (!selected) {
       if (isOwnTopPiece(cell) && isHumanTurn()) {
@@ -251,19 +256,71 @@
     flashCell(cell);
   }
 
-  function executeAction(cell) {
+  function resolveSourceElement(sel) {
+    if (!sel) return null;
+    if (sel.kind === 'tray') {
+      return document.querySelector(
+        `.tray-slot[data-color="${game.currentPlayer}"][data-piece-id="${sel.pieceId}"]`
+      );
+    }
+    if (sel.kind === 'board') {
+      return boardEl.querySelector(`.cell[data-cell="${sel.cell}"]`);
+    }
+    return null;
+  }
+
+  async function executeAction(cell) {
+    const startSeq = requestSeq;
+    animating = true;
+    render();
+
+    const sourceEl = resolveSourceElement(selected);
+    if (!sourceEl) {
+      animating = false;
+      render();
+      flashCell(cell);
+      return;
+    }
+
+    sourceEl.classList.add('shine');
+    await sleep(ANIM.shineMs);
+    if (startSeq !== requestSeq) return;
+    sourceEl.classList.remove('shine');
+
     let res;
     if (selected.kind === 'tray') {
       res = game.place(selected.pieceId, cell);
     } else {
       res = game.move(selected.cell, cell);
     }
-    if (res.ok) {
-      selected = null;
+    selected = null;
+
+    if (!res.ok) {
+      animating = false;
       render();
+      flashCell(cell);
+      return;
+    }
+
+    render();
+    if (startSeq !== requestSeq) return;
+
+    const destEl = boardEl.querySelector(`.cell[data-cell="${cell}"]`);
+    if (destEl) {
+      destEl.classList.add('shine');
+      await sleep(ANIM.shineMs);
+      if (startSeq !== requestSeq) return;
+      destEl.classList.remove('shine');
+    }
+
+    animating = false;
+
+    if (game.winner) {
+      render();
+    } else if (isModelTurn()) {
       maybeFireModelMove();
     } else {
-      flashCell(cell);
+      render();
     }
   }
 
@@ -303,6 +360,77 @@
     return true;
   }
 
+  async function applyServerActionAnimated(action) {
+    const startSeq = requestSeq;
+
+    modelThinking = false;
+    animating = true;
+    render();
+
+    let sourceEl;
+    if (action.kind === 'place') {
+      const sizeName = SIZE_ORDER[action.size];
+      const piece = game.tray(game.currentPlayer).find(p => p.size === sizeName);
+      if (!piece) {
+        showError('Model returned a place action with no available piece');
+        animating = false;
+        return;
+      }
+      sourceEl = document.querySelector(
+        `.tray-slot[data-color="${game.currentPlayer}"][data-piece-id="${piece.id}"]`
+      );
+    } else if (action.kind === 'move') {
+      sourceEl = boardEl.querySelector(`.cell[data-cell="${action.from_}"]`);
+    } else {
+      showError(`Unknown action kind: ${action.kind}`);
+      animating = false;
+      return;
+    }
+
+    if (sourceEl) {
+      sourceEl.classList.add('shine');
+      await sleep(ANIM.shineMs);
+      if (startSeq !== requestSeq) {
+        animating = false;
+        return;
+      }
+      sourceEl.classList.remove('shine');
+    }
+
+    const ok = applyServerAction(action);
+    if (!ok) {
+      animating = false;
+      render();
+      return;
+    }
+    render();
+    if (startSeq !== requestSeq) {
+      animating = false;
+      return;
+    }
+
+    const destEl = boardEl.querySelector(`.cell[data-cell="${action.to}"]`);
+    if (destEl) {
+      destEl.classList.add('shine');
+      await sleep(ANIM.shineMs);
+      if (startSeq !== requestSeq) {
+        animating = false;
+        return;
+      }
+      destEl.classList.remove('shine');
+    }
+
+    animating = false;
+
+    if (game.winner) {
+      render();
+    } else if (isModelTurn()) {
+      maybeFireModelMove();
+    } else {
+      render();
+    }
+  }
+
   function showError(msg) {
     lastError = msg;
     modelAvailable = false;  // disable model mode for the rest of the session
@@ -326,6 +454,7 @@
   async function maybeFireModelMove() {
     if (!isModelTurn()) return;
     if (modelThinking) return;
+    if (animating) return;
     modelThinking = true;
     const seq = ++requestSeq;
     render();
@@ -345,15 +474,13 @@
       }
       const body = await r.json();
       if (seq !== requestSeq) return;
-      if (!applyServerAction(body.action)) return;
+      await applyServerActionAnimated(body.action);
     } catch (e) {
       if (seq !== requestSeq) return;
       showError(`Model error: ${e.message}`);
-    } finally {
-      if (seq === requestSeq) {
-        modelThinking = false;
-        render();
-      }
+      modelThinking = false;
+      animating = false;
+      render();
     }
   }
 
@@ -361,6 +488,8 @@
     game = GobbletGame.create();
     selected = null;
     lastError = null;
+    animating = false;
+    modelThinking = false;
     requestSeq++;
     render();
     if (isModelTurn()) maybeFireModelMove();
@@ -382,11 +511,16 @@
 
   undoBtn.addEventListener('click', () => {
     if (modelThinking) return;
+    if (animating) return;
     if (!game.canUndo()) return;
-    game.undo();
+    if (mode === 'model') {
+      if (game.canUndo()) game.undo();
+      if (game.canUndo() && !game.winner) game.undo();
+    } else {
+      game.undo();
+    }
     selected = null;
     render();
-    if (isModelTurn()) maybeFireModelMove();
   });
 
   restartBtn.addEventListener('click', () => {
