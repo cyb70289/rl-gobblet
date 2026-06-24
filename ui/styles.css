@@ -39,7 +39,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: calc(var(--cell-size) * 3 + var(--board-gap) * 2);
+  flex-wrap: nowrap;
+  white-space: nowrap;
   gap: 12px;
 }
 
@@ -49,6 +50,7 @@ html, body {
   padding: 6px 14px;
   border-radius: 999px;
   border: 2px solid transparent;
+  white-space: nowrap;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
@@ -78,7 +80,8 @@ html, body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   justify-content: center;
 }
 
@@ -121,7 +124,7 @@ html, body {
 
 .hidden { display: none !important; }
 
-.controls { display: flex; gap: 8px; }
+.controls { display: flex; gap: 8px; white-space: nowrap; }
 
 .controls button {
   font-size: 14px;
@@ -252,3 +255,19 @@ html, body {
 .banner.blue { color: var(--blue-bright); border-color: var(--blue-bright); }
 .banner.error { color: #ff6b6b; border-color: #ff6b6b; background: #2a1f1f; }
 .banner.hidden { display: none; }
+
+@keyframes shine-pulse {
+  0%, 50%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  25%, 75% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 10px var(--select));
+  }
+}
+
+.shine {
+  animation: shine-pulse 1.0s ease-in-out;
+  z-index: 1;
+}
