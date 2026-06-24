@@ -353,8 +353,12 @@ async function applyServerActionAnimated(action) {
   }
 
   animating = true;
-  // modelThinking is still true here. render() so the cells are unlocked
-  // (locked class) but the model is still flagged.
+  // The model has just responded. Drop modelThinking (cells get
+  // unlocked via the render below) and start the shine animation.
+  // The `modelThinking = false` happens here, not at the end of the
+  // function, so the source/dest cells render without the .locked
+  // class.
+  modelThinking = false;
   render();
 
   if (sourceEl) {
@@ -362,7 +366,6 @@ async function applyServerActionAnimated(action) {
     await sleep(ANIM.shineMs);
     if (startSeq !== requestSeq) {
       animating = false;
-      modelThinking = false;
       return;
     }
     sourceEl.classList.remove('shine');
@@ -372,14 +375,12 @@ async function applyServerActionAnimated(action) {
   const ok = applyServerAction(action);
   if (!ok) {
     animating = false;
-    modelThinking = false;
     render();
     return;
   }
   render();
   if (startSeq !== requestSeq) {
     animating = false;
-    modelThinking = false;
     return;
   }
 
@@ -390,14 +391,12 @@ async function applyServerActionAnimated(action) {
     await sleep(ANIM.shineMs);
     if (startSeq !== requestSeq) {
       animating = false;
-      modelThinking = false;
       return;
     }
     destEl.classList.remove('shine');
   }
 
   animating = false;
-  modelThinking = false;
 
   if (game.winner) {
     render();
