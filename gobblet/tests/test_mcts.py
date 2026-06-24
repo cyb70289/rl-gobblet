@@ -43,7 +43,7 @@ def test_mcts_terminal_state_returns_empty_counts():
 
 
 def test_mcts_immediate_win_is_preferred():
-    # set up red one-move-from-win: red S@0, M@1, red can place L@2 to win row 0.
+    # set up red one-move-from-win: red S@0, M@1; placing any size at 2 wins row 0.
     net, cfg = _make_net()
     cfg = Config.for_smoke()
     cfg.mcts.simulations = 100
@@ -54,14 +54,14 @@ def test_mcts_immediate_win_is_preferred():
     st = st.apply(Action.place(S, 3))   # blue S@3
     st = st.apply(Action.place(M, 1))   # red M@1
     st = st.apply(Action.place(S, 5))   # blue S@5
-    # red to move; placing L@2 wins.
+    # red to move; placing S@2, M@2, or L@2 all complete a red row 0 (sizes ignored).
     mcts = MCTS(cfg.mcts, net)
     counts = mcts.search(st)
-    win_idx = action_to_index(Action.place(L, 2))
-    # the winning move should be the most visited
+    winning_indices = {action_to_index(Action.place(sz, 2)) for sz in (S, M, L)}
+    # the most-visited action should be a winning action
     best_idx = counts.argmax().item()
-    assert best_idx == win_idx
-    assert counts[win_idx].item() > 0
+    assert best_idx in winning_indices, f"expected a winning action to be top, got {best_idx}"
+    assert counts[best_idx].item() > 0
 
 
 def test_mcts_tree_reuse():

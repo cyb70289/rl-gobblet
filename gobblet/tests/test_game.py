@@ -228,11 +228,11 @@ def test_win_row_LMS_reverse():
 
 def test_win_col_SML():
     st = State.initial()
-    st = place(st, RED, S, 2)
+    st = place(st, RED, S, 1)
     st = place(st, BLUE, S, 0)
     st = place(st, RED, M, 5)
     st = place(st, BLUE, M, 3)
-    st = place(st, RED, M, 8)
+    st = place(st, RED, M, 7)  # red tops 1,5,7 — not a line
     st = place(st, BLUE, L, 6)
     assert st.winner == BLUE
     assert sorted(st.winning_cells()) == [0, 3, 6]
@@ -281,14 +281,15 @@ def test_win_mixed_colors_no_win():
     assert st.winner is None
 
 
-def test_win_wrong_order_no_win():
+def test_win_s_l_m_order_wins():
     st = State.initial()
     st = place(st, RED, S, 0)
     st = place(st, BLUE, S, 3)
     st = place(st, RED, L, 1)
     st = place(st, BLUE, S, 5)
-    st = place(st, RED, M, 2)  # row 0 = S, L, M -> not monotonic
-    assert st.winner is None
+    st = place(st, RED, M, 2)  # row 0 = S, L, M -> same-color tops win, sizes ignored
+    assert st.winner == RED
+    assert sorted(st.winning_cells()) == [0, 1, 2]
 
 
 def test_game_locked_after_win():
@@ -311,7 +312,7 @@ def test_find_winning_lines_reports_both_colors():
     st = place(st, BLUE, S, 5)
     st = place(st, RED, L, 2)
     lines = st.find_winning_lines()
-    assert any(c == (0, 1, 2) and s == (S, M, L) for (c, s) in lines[RED])
+    assert (0, 1, 2) in lines[RED]
     assert lines[BLUE] == []
 
 
@@ -440,11 +441,11 @@ def test_value_after_red_win_blue_to_move_is_loss():
 
 def test_value_after_blue_win_red_to_move_is_loss():
     st = State.initial()
-    st = place(st, RED, S, 2)
+    st = place(st, RED, S, 1)
     st = place(st, BLUE, S, 0)
     st = place(st, RED, M, 5)
     st = place(st, BLUE, M, 3)
-    st = place(st, RED, M, 8)
+    st = place(st, RED, M, 7)  # red tops 1,5,7 — not a line
     st = place(st, BLUE, L, 6)
     assert st.winner == BLUE
     assert st.current_player == RED

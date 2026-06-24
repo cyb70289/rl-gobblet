@@ -68,16 +68,17 @@ You may only move **your own** top pieces. You may never move an opponent's piec
 
 A player wins when, after an action, there exist three of that player's pieces,
 all at the top of their cells, all the same color, occupying a complete line
-(row, column, or diagonal), and the sizes along that line are in **strict
-monotonic order** — either Small → Middle → Large or Large → Middle → Small
-(positionally along the line).
+(row, column, or diagonal). **Sizes are ignored for win detection** — any
+combination of sizes along the line counts, including three of the same size
+or any permutation of S/M/L.
 
-Either direction is allowed per line. Concretely the 8 lines are:
-- Rows 0, 1, 2 (each read left→right as S-M-L, or right→left as S-M-L)
-- Columns 0, 1, 2 (each read top→bottom as S-M-L, or bottom→top as S-M-L)
-- The two diagonals (each read start→end as S-M-L, or end→start as S-M-L)
+The 8 lines are:
+- Rows 0, 1, 2 (each read left→right)
+- Columns 0, 1, 2 (each read top→bottom)
+- The two diagonals (each read start→end)
 
-That gives 16 winning size/position patterns total.
+The order in which the three tops are read along the line is irrelevant; only
+the three cells matter.
 
 Only the top piece of each cell participates in win detection. Covered (non-top)
 pieces do not count toward a winning line.
@@ -122,5 +123,4 @@ Notes:
 - Only top pieces are movable (and only your own).
 - Only top pieces count toward winning lines.
 - A moved piece stays on the board; only unplaced pieces live in the tray.
-- Win = three same-color tops in a line with sizes strictly monotonic
-  (S-M-L or L-M-S) along the line.
+- Win = three same-color tops in a line, regardless of sizes.

@@ -37,11 +37,11 @@ test('win: red L-M-S along row 0 (cells 0,1,2 with sizes L,M,S) -> red wins (rev
 
 test('win: blue S-M-L along column 0 (cells 0,3,6) -> blue wins', () => {
   const game = create();
-  place(game, 'red', 'S', 2);
+  place(game, 'red', 'S', 1);     // red tops 1,5,7 — not a line
   place(game, 'blue', 'S', 0);
   place(game, 'red', 'M', 5);
   place(game, 'blue', 'M', 3);
-  place(game, 'red', 'M', 8);
+  place(game, 'red', 'M', 7);
   place(game, 'blue', 'L', 6);
 
   assert.strictEqual(game.winner, 'blue');
@@ -96,7 +96,7 @@ test('win: mixed colors in a line do not win — red S, blue M, red L in row 0 -
   assert.deepStrictEqual(game.winningCells(), []);
 });
 
-test('win: wrong size order does not win — red S, red L, red M in row 0 (S-L-M) -> no win', () => {
+test('win: red S, red L, red M in row 0 (S-L-M, sizes ignored) -> red wins', () => {
   const game = create();
   place(game, 'red', 'S', 0);
   place(game, 'blue', 'S', 3);
@@ -104,8 +104,9 @@ test('win: wrong size order does not win — red S, red L, red M in row 0 (S-L-M
   place(game, 'blue', 'S', 5);
   place(game, 'red', 'M', 2);
 
-  assert.strictEqual(game.winner, null);
-  assert.deepStrictEqual(game.winningCells(), []);
+  assert.strictEqual(game.winner, 'red');
+  assert.strictEqual(game.isGameOver(), true);
+  assert.deepStrictEqual(game.winningCells().sort((a,b)=>a-b), [0, 1, 2]);
 });
 
 test('win: game is locked after a win — further place/move rejected', () => {
@@ -139,6 +140,6 @@ test('findWinningLines: reports lines for both colors from the current board sta
   assert.ok(lines.red.length >= 1, 'red should have a winning line');
   const row = lines.red.find(ln => ln.cells.join(',') === '0,1,2');
   assert.ok(row, 'red winning line should be row 0,1,2');
-  assert.deepStrictEqual(row.sizes, ['S', 'M', 'L']);
+  assert.strictEqual(row.color, 'red');
   assert.strictEqual(lines.blue.length, 0);
 });

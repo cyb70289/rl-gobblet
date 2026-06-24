@@ -23,9 +23,8 @@ Each **iteration**:
 ## Key design decisions
 
 - **Game**: 3×3 board, 12 pieces (2S/2M/2L per player). Win = 3 same-color
-  tops in a line with strictly monotonic sizes (S-M-L or L-M-S). Draws via
-  3-fold repetition or 100-ply cap. Value ∈ {−1, 0, +1} from
-  player-to-move's view.
+  tops in a line, sizes ignored. Draws via 3-fold repetition or 100-ply cap.
+  Value ∈ {−1, 0, +1} from player-to-move's view.
 - **State encoding**: 21-channel (3×3) tensor — stack presence (6), tops
   (6), turn (1), own-tops (1), ply/100 (1), tray counts (6).
 - **Action space**: 99-dim — 27 place(size, cell) + 72 move(from, to).

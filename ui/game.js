@@ -36,8 +36,6 @@
       [0, 3, 6], [1, 4, 7], [2, 5, 8],   // cols
       [0, 4, 8], [2, 4, 6],              // diagonals
     ];
-    const FWD = ['S', 'M', 'L'];
-    const REV = ['L', 'M', 'S'];
 
     function findWinningLines() {
       const result = { red: [], blue: [] };
@@ -49,10 +47,7 @@
         if (!tops.every(Boolean)) continue;
         const color = tops[0].color;
         if (!tops.every(p => p.color === color)) continue;
-        const sizes = tops.map(p => p.size);
-        const ordered = sizes.join(',') === FWD.join(',') || sizes.join(',') === REV.join(',');
-        if (!ordered) continue;
-        result[color].push({ cells: line.slice(), sizes, color });
+        result[color].push({ cells: line.slice(), color });
       }
       return result;
     }

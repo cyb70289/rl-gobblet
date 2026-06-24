@@ -29,7 +29,6 @@ LINES = (
     (0, 3, 6), (1, 4, 7), (2, 5, 8),   # cols
     (0, 4, 8), (2, 4, 6),              # diagonals
 )
-WIN_ORDERS = ((S, M, L), (L, M, S))
 
 CELL = Tuple[int, int]  # (color, size)
 
@@ -121,10 +120,7 @@ class State:
             color = tops[0][0]
             if any(t[0] != color for t in tops):
                 continue
-            sizes = tuple(t[1] for t in tops)
-            if sizes not in WIN_ORDERS:
-                continue
-            result[color].append((tuple(line), sizes))
+            result[color].append(tuple(line))
         return result
 
     def winning_cells(self) -> list:
@@ -132,7 +128,7 @@ class State:
             return []
         lines = self.find_winning_lines()
         if lines[self.winner]:
-            return list(lines[self.winner][0][0])
+            return list(lines[self.winner][0])
         return []
 
     # ---- legality & apply ----

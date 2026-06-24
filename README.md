@@ -9,8 +9,8 @@ opponent in a browser-based UI.
 Two players (red, blue) take turns placing or moving buckets on a
 3×3 board. Each player has 6 pieces — 2 each of small, medium, and
 large. Larger pieces cover smaller ones, and only the top piece of
-each cell counts. Win by forming a line of 3 same-color tops whose
-sizes are in S→M→L or L→M→S order. Red moves first. See
+each cell counts. Win by forming a line of 3 same-color tops
+(sizes are ignored). Red moves first. See
 [docs/game-rules.md](docs/game-rules.md) for the full rules.
 
 ## Model
