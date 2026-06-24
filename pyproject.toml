@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gobblet"
+version = "0.1.0"
+description = "AlphaZero-like self-play for Gobblet (3x3)"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "numpy",
+    "tqdm",
+    "tensorboard",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+gobblet-train = "gobblet.train:main"
+gobblet-play = "gobblet.play:main"
+gobblet-arena = "gobblet.arena:main"
+
+[tool.setuptools.packages.find]
+include = ["gobblet*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
