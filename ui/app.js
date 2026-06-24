@@ -284,6 +284,9 @@
 
     sourceEl.classList.add('shine');
     await sleep(ANIM.shineMs);
+    // On requestSeq mismatch, restartGame() is the only caller that bumps
+    // requestSeq during an action; it always resets animating=false too,
+    // so we don't need to do it here.
     if (startSeq !== requestSeq) return;
     sourceEl.classList.remove('shine');
 
