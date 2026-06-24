@@ -159,6 +159,7 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--sims", type=int, default=200, help="MCTS simulations per move")
     parser.add_argument("--smoke", action="store_true", help="use tiny smoke config (random init, 4 sims)")
+    parser.add_argument("--static-dir", default="ui", help="directory containing index.html, app.js, etc.")
     args = parser.parse_args()
 
     cfg = Config.for_smoke() if args.smoke else Config()
@@ -176,7 +177,7 @@ def main():
 
     app = create_app(
         net=net, mcts=mcts, model_path=args.ckpt, sims=cfg.mcts.simulations,
-        static_dir=".",
+        static_dir=args.static_dir,
     )
 
     if args.smoke:

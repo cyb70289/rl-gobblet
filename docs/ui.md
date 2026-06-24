@@ -9,18 +9,26 @@ A web UI for the Gobblet game. Two modes:
 
 ## Files
 
-- `index.html` — markup; loads `game.js` then `app.js` as plain `<script>` tags.
-- `styles.css` — all styling. Visual constants (cell size, piece radii, colors)
-  are CSS variables in `:root` — change visuals there, not in JS.
-- `game.js` — **pure game logic**, no DOM. Exposes `window.GobbletGame` (UMD:
-  also works under Node `require`). Reusable by the trainer and the server.
-- `app.js` — UI controller; imports nothing, calls `GobbletGame` directly.
-- `gobblet/webui.py` — FastAPI server (entry point `python -m gobblet.webui`).
-  Exposes `GET /api/health` and `POST /api/move` and serves the static files.
+UI code lives under `ui/`:
 
-> Architecture rule: keep `game.js` DOM-free and framework-agnostic. All UI
-> concerns live in `app.js` + `styles.css` + `index.html`. The server in
-> `gobblet/webui.py` reuses the same `State`/`Action`/`MCTS` types the
+- `ui/index.html` — markup; loads `game.js` then `app.js` as plain `<script>` tags.
+- `ui/styles.css` — all styling. Visual constants (cell size, piece radii, colors)
+  are CSS variables in `:root` — change visuals there, not in JS.
+- `ui/game.js` — **pure game logic**, no DOM. Exposes `window.GobbletGame` (UMD:
+  also works under Node `require`). Reusable by the trainer and the server.
+- `ui/app.js` — UI controller; imports nothing, calls `GobbletGame` directly.
+- `ui/package.json` — JS package config (jsdom is the only dev dep; `npm test`
+  runs the JS test suite).
+
+Server code lives under `gobblet/`:
+
+- `gobblet/webui.py` — FastAPI server (entry point `python -m gobblet.webui`).
+  Exposes `GET /api/health` and `POST /api/move` and serves the static files
+  from `ui/` by default.
+
+> Architecture rule: keep `ui/game.js` DOM-free and framework-agnostic. All UI
+> concerns live in `ui/app.js` + `ui/styles.css` + `ui/index.html`. The server
+> in `gobblet/webui.py` reuses the same `State`/`Action`/`MCTS` types the
 > trainer uses; it does **not** depend on the DOM.
 
 ## GobbletGame API (used by app.js)
@@ -152,7 +160,7 @@ or
 ## Server (`gobblet/webui.py`)
 
 ```bash
-python -m gobblet.webui --ckpt model/gobblet.pt [--port 8000] [--host 127.0.0.1] [--sims 200] [--smoke]
+python -m gobblet.webui --ckpt model/gobblet.pt [--port 8000] [--host 127.0.0.1] [--sims 200] [--smoke] [--static-dir ui]
 ```
 
 - `--ckpt` — path to a trained checkpoint. The model architecture is
@@ -163,43 +171,44 @@ python -m gobblet.webui --ckpt model/gobblet.pt [--port 8000] [--host 127.0.0.1]
 - `--smoke` — use `Config.for_smoke()` (tiny model, 4 sims) and skip loading
   the checkpoint. Useful for development without GPU. The server logs
   `SMOKE mode (random init): sims=4, device=...` at startup.
+- `--static-dir` — directory containing the static files (default `ui/`).
 
 The server loads the model eagerly at startup and exits with a clear
 error if the checkpoint is missing. The first `/api/move` request has
 no cold-start penalty.
 
-Static files (`index.html`, `app.js`, `game.js`, `styles.css`) are served
-from the current working directory by the same FastAPI process. CORS is
-not configured (same origin).
+Static files are served from the `--static-dir` directory (default `ui/`,
+relative to the current working directory) by the same FastAPI process.
+CORS is not configured (same origin).
 
 ## Tests
 
-`npm test` runs JS tests; `.venv/bin/python -m pytest test/gobblet/` runs
-Python tests.
+`cd ui && npm test` runs the JS tests; `.venv/bin/python -m pytest gobblet/tests/`
+runs the Python tests.
 
-- `test/*.test.js` — pure logic tests of `game.js` via `node:test`,
-  zero external deps. These are the contract for `game.js`.
-- `test/ui.smoke.test.js` — loads the real `index.html` + `game.js` +
+- `ui/tests/*.test.js` — pure logic tests of `ui/game.js` via `node:test`,
+  zero external deps. These are the contract for `ui/game.js`.
+- `ui/tests/ui.smoke.test.js` — loads the real `index.html` + `game.js` +
   `app.js` into jsdom and simulates clicks. Verifies both manual play
   (place, move, win display, undo, restart, invalid-click flash) and
   model play (mode toggle, health check, fetch, action application,
   undo re-think, 5xx error handling, server-down handling). Mocks
   `window.fetch` to avoid needing a real server. **Requires jsdom**
-  (`npm install` once).
-- `test/gobblet/test_webui.py` — Python tests for the server using
+  (`npm install` once in `ui/`).
+- `gobblet/tests/test_webui.py` — Python tests for the server using
   FastAPI's `TestClient` and a freshly-initialized smoke `GobbletNet`.
   Verifies `/api/health` shape, `/api/move` legality/illegal-state
   coverage, static file serving.
 
 ## Adding features (typical paths)
 
-- **New visual cue** → `styles.css` + a class toggle in `app.js`'s `render()`.
-- **New control button** → markup in `index.html`, handler in `app.js`, state
-  stays in `game` if it touches game state.
+- **New visual cue** → `ui/styles.css` + a class toggle in `ui/app.js`'s `render()`.
+- **New control button** → markup in `ui/index.html`, handler in `ui/app.js`,
+  state stays in `game` if it touches game state.
 - **New server endpoint** → handler in `gobblet/webui.py`'s `create_app`,
-  with tests in `test/gobblet/test_webui.py` using `TestClient`.
-- **New game rule** → add a failing logic test in `test/`, implement in
-  `game.js`, then update `app.js` only if the UI surface changes.
+  with tests in `gobblet/tests/test_webui.py` using `TestClient`.
+- **New game rule** → add a failing logic test in `ui/tests/`, implement in
+  `ui/game.js`, then update `ui/app.js` only if the UI surface changes.
 
 See `docs/game-rules.md` for the rules themselves,
 `docs/model.md` for the training pipeline, and

@@ -151,4 +151,4 @@ def test_app_js_is_served_at_root_path(static_dir_from_test):
 @pytest.fixture
 def static_dir_from_test():
     from pathlib import Path
-    return Path(__file__).resolve().parents[2]
+    return Path(__file__).resolve().parents[2] / "ui"
