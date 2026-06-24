@@ -1,0 +1,4 @@
+node_modules/
+plans/
+.DS_Store
+*.log

@@ -1,0 +1,12 @@
+{
+  "name": "rf-gobble",
+  "version": "0.1.0",
+  "description": "Gobblet-style game built toward an AlphaZero-like solver",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
