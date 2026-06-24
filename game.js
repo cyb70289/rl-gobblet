@@ -2,7 +2,7 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory();
   } else {
-    root.GobbleGame = factory();
+    root.GobbletGame = factory();
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   const SIZES = ['S', 'M', 'L'];

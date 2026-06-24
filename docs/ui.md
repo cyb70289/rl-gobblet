@@ -1,6 +1,6 @@
-# Gobble — UI Guide (Step 1)
+# Gobblet — UI Guide
 
-A static, manually-playable web page for the Gobble game. Opens directly via
+A static, manually-playable web page for the Gobblet game. Opens directly via
 `file://` (no server). Future steps will extend this UI (e.g. show the model's
 best moves); this doc is the entry point for those changes.
 
@@ -9,17 +9,17 @@ best moves); this doc is the entry point for those changes.
 - `index.html` — markup; loads `game.js` then `app.js` as plain `<script>` tags.
 - `styles.css` — all styling. Visual constants (cell size, piece radii, colors)
   are CSS variables in `:root` — change visuals there, not in JS.
-- `game.js` — **pure game logic**, no DOM. Exposes `window.GobbleGame` (UMD:
+- `game.js` — **pure game logic**, no DOM. Exposes `window.GobbletGame` (UMD:
   also works under Node `require`). Reusable by the future RL trainer.
-- `app.js` — UI controller; imports nothing, calls `GobbleGame` directly.
+- `app.js` — UI controller; imports nothing, calls `GobbletGame` directly.
 
 > Architecture rule: keep `game.js` DOM-free and framework-agnostic. All UI
 > concerns live in `app.js` + `styles.css` + `index.html`. The RL trainer in
 > later steps will reuse `game.js` verbatim — do not couple it to the DOM.
 
-## GobbleGame API (used by app.js)
+## GobbletGame API (used by app.js)
 
-`GobbleGame.create()` returns a game instance. Key methods:
+`GobbletGame.create()` returns a game instance. Key methods:
 
 - `currentPlayer` / `winner` — getters (`'red'` | `'blue'` | `null`).
 - `isGameOver()`, `canUndo()`.
@@ -38,7 +38,7 @@ Cell indexing: 0-8, row-major (0=top-left, 8=bottom-right).
 
 Single IIFE, ~150 lines. Straightforward read; key points:
 
-- **State**: `game` (the `GobbleGame` instance) + `selected` (currently selected
+- **State**: `game` (the `GobbletGame` instance) + `selected` (currently selected
   piece or cell, or `null`). No other UI state — everything else is derived
   from `game` on each `render()`.
 - **Selection model**: click a tray piece or an own top piece on the board to

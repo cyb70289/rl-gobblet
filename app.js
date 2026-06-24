@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const GobbleGame = window.GobbleGame;
-  let game = GobbleGame.create();
+  const GobbletGame = window.GobbletGame;
+  let game = GobbletGame.create();
   let selected = null; // {kind:'tray', pieceId} | {kind:'board', cell} | null
 
   const RADII = { S: 20, M: 32, L: 44 };
@@ -202,7 +202,7 @@
   });
 
   restartBtn.addEventListener('click', () => {
-    game = GobbleGame.create();
+    game = GobbletGame.create();
     selected = null;
     render();
   });
