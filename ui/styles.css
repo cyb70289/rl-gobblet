@@ -257,17 +257,17 @@ html, body {
 .banner.hidden { display: none; }
 
 @keyframes shine-pulse {
-  0%, 50%, 100% {
+  0%, 100% {
     transform: scale(1);
     filter: drop-shadow(0 0 0 transparent);
   }
-  25%, 75% {
+  50% {
     transform: scale(1.18);
     filter: drop-shadow(0 0 10px var(--select));
   }
 }
 
 .shine {
-  animation: shine-pulse 1.0s ease-in-out;
+  animation: shine-pulse 0.5s ease-in-out;
   z-index: 1;
 }

@@ -91,8 +91,8 @@ Switching the mode or color always **restarts the game**. There is no
 about which color the human is.
 
 Every **model** move plays a short "shine" animation: the originating
-element pulses twice with a gold glow (1.0s), the state changes
-instantly, then the destination cell pulses twice more (1.0s). Human
+element pulses once with a gold glow (0.5s), the state changes
+instantly, then the destination cell pulses once more (0.5s). Human
 moves are applied instantly with no animation — the player already
 knows what they did. Clicks, undo, and mode switches are ignored
 while the animation is in progress. `Restart` is never disabled and cancels

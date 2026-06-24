@@ -21,7 +21,7 @@
   const COLOR_INT = { red: 0, blue: 1 };
   const INT_COLOR = ['red', 'blue'];
 
-  const ANIM = (typeof window !== 'undefined' && window.__gobbletAnim) || { shineMs: 1000 };
+  const ANIM = (typeof window !== 'undefined' && window.__gobbletAnim) || { shineMs: 500 };
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
