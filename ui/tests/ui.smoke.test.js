@@ -11,6 +11,8 @@ function loadDom(opts = {}) {
     .replace(/<script src="app\.js"><\/script>\s*/, '');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
   const { window } = dom;
+  // expose config to app.js before app.js loads
+  window.__gobbletAnim = opts.anim || { shineMs: 0 };
   if (opts.fetch) window.fetch = opts.fetch;
   for (const file of ['game.js', 'app.js']) {
     const s = window.document.createElement('script');
@@ -21,8 +23,12 @@ function loadDom(opts = {}) {
 }
 
 async function flush() {
-  await new Promise(r => setTimeout(r, 0));
-  await new Promise(r => setTimeout(r, 0));
+  // The new async action pipeline (source-shine, state, dest-shine,
+  // model fetch, model-apply) can take up to ~6 macrotasks when
+  // shineMs=0. Flush generously.
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 0));
+  }
 }
 
 function defaultHealth() {
@@ -72,6 +78,21 @@ function cellTopColor(window, cell) {
   if (fill.startsWith('hsl(8')) return 'red';
   if (fill.startsWith('hsl(205')) return 'blue';
   return null;
+}
+
+function modeControlsOrder(window) {
+  const mc = window.document.querySelector('.mode-controls');
+  const out = [];
+  for (const c of mc.children) {
+    if (c.id) {
+      out.push(c.id);
+    } else {
+      // wrapping <label> for a <select>; pick the select's id
+      const sel = c.querySelector('select');
+      out.push(sel ? sel.id : c.tagName.toLowerCase());
+    }
+  }
+  return out;
 }
 
 test('UI initial render: Red to move, empty board, 6 slots per tray, undo disabled, banner hidden', () => {
@@ -285,31 +306,6 @@ test('UI: in model mode (you=blue), the model moves first', async () => {
   assert.strictEqual(cellTopColor(w, 4), 'red', 'red M placed at cell 4');
 });
 
-test('UI: undo during model play re-triggers the model', async () => {
-  const mock = makeFetchMock();
-  const w = loadDom({ fetch: mock.fn });
-  await flush();
-
-  const modeSelect = w.document.getElementById('mode-select');
-  modeSelect.value = 'model';
-  modeSelect.dispatchEvent(new w.Event('change'));
-  await flush();
-
-  findSlot(w, 'red', 'S').click();
-  cellEl(w, 0).click();
-  await flush();
-
-  const before = mock.requests.filter(r => r.url === '/api/move').length;
-  assert.ok(before >= 1, 'model moved at least once');
-
-  // undo: should pop the model's move, putting us back on the model's turn
-  w.document.getElementById('undo-btn').click();
-  await flush();
-
-  const after = mock.requests.filter(r => r.url === '/api/move').length;
-  assert.ok(after > before, 'model re-fired after undo');
-});
-
 test('UI: a 5xx from /api/move shows an error and disables the model option', async () => {
   const mock = makeFetchMock({
     move: { ok: false, status: 500, text: async () => 'server error' },
@@ -344,4 +340,82 @@ test('UI: server down on initial load disables the model option', async () => {
   const modeSelect = w.document.getElementById('mode-select');
   const modelOpt = modeSelect.querySelector('option[value="model"]');
   assert.ok(modelOpt.disabled, 'model option disabled when health fails');
+});
+
+test('UI: mode-controls order is Mode, Model Status, Color', () => {
+  const w = loadDom();
+  const order = modeControlsOrder(w);
+  assert.deepStrictEqual(
+    order,
+    ['mode-select', 'model-status', 'color-picker'],
+    `expected [mode-select, model-status, color-picker] got ${JSON.stringify(order)}`
+  );
+});
+
+test('UI: undo in model mode pops two plies and does not fire the model', async () => {
+  const mock = makeFetchMock();
+  const w = loadDom({ fetch: mock.fn });
+  await flush();
+
+  const modeSelect = w.document.getElementById('mode-select');
+  modeSelect.value = 'model';
+  modeSelect.dispatchEvent(new w.Event('change'));
+  await flush();
+
+  // human (red) plays
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  await flush();
+  // model (blue) has placed M at 4
+  assert.strictEqual(cellTopColor(w, 4), 'blue');
+
+  const moveReqsBefore = mock.requests.filter(r => r.url === '/api/move').length;
+  assert.strictEqual(moveReqsBefore, 1);
+
+  // undo: should pop both the model's and the human's moves
+  w.document.getElementById('undo-btn').click();
+  await flush();
+
+  // state is back to start (cell 0 empty, cell 4 empty, red tray full)
+  assert.strictEqual(cellEl(w, 0).querySelector('circle'), null, 'cell 0 should be empty after undo');
+  assert.strictEqual(cellEl(w, 4).querySelector('circle'), null, 'cell 4 should be empty after undo');
+  assert.strictEqual(traySlots(w, 'red').length, 6, 'red tray should be full after undo');
+  assert.strictEqual(w.document.getElementById('turn-label').textContent, "Red's turn");
+
+  // model must NOT have re-fired
+  const moveReqsAfter = mock.requests.filter(r => r.url === '/api/move').length;
+  assert.strictEqual(moveReqsAfter, 1, 'model should not re-fire after undo');
+});
+
+test('UI: undo in manual mode still pops one ply', async () => {
+  const w = loadDom();
+  // red S@0, blue S@3
+  findSlot(w, 'red', 'S').click();   cellEl(w, 0).click();
+  findSlot(w, 'blue', 'S').click();  cellEl(w, 3).click();
+  // undo: should pop the blue S@3 move only
+  w.document.getElementById('undo-btn').click();
+  await flush();
+  // cell 0 has red S; cell 3 empty; blue tray back to 6
+  assert.strictEqual(cellTopColor(w, 0), 'red');
+  assert.strictEqual(cellEl(w, 3).querySelector('circle'), null, 'cell 3 should be empty');
+  assert.strictEqual(traySlots(w, 'blue').length, 6, 'blue tray should be full after one undo');
+  assert.match(w.document.getElementById('turn-label').textContent, /Red/);
+});
+
+test('UI: source element receives the .shine class during a click', async () => {
+  // Use a non-zero shineMs so we can observe the class mid-animation
+  const w = loadDom({ anim: { shineMs: 50 } });
+  // red selects S and starts a click on cell 0
+  findSlot(w, 'red', 'S').click();
+  cellEl(w, 0).click();
+  // The render() inside executeAction creates a fresh DOM. Query by class.
+  const shiningSlot = w.document.querySelector('.tray-slot.shine');
+  assert.ok(shiningSlot, 'a tray slot should have .shine class right after click');
+  // wait for the animation to complete
+  await flush();
+  assert.strictEqual(
+    w.document.querySelector('.tray-slot.shine'),
+    null,
+    'tray slot .shine should be removed after animation'
+  );
 });
