@@ -2,3 +2,15 @@ node_modules/
 plans/
 .DS_Store
 *.log
+
+# python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# training runs
+runs/
+
