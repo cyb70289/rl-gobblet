@@ -43,7 +43,7 @@ Each **iteration**:
 
 ## Source files
 
-All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `test/`.
+All source lives in `gobblet/`. Python tests in `gobblet/tests/`. JS tests in `ui/tests/`.
 
 | File | Lines | Role |
 |------|-------|------|
@@ -61,7 +61,7 @@ All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `te
 
 ## Tests
 
-`test/gobblet/` — 100 tests, all passing. Key suites:
+`gobblet/tests/` — 112 tests, all passing. Key suites:
 
 | File | Tests | Covers |
 |------|-------|--------|
@@ -74,7 +74,7 @@ All source lives in `gobblet/`. Python tests in `test/gobblet/`. JS tests in `te
 | `test_train.py` | 3 | Full iteration smoke, resume, Gate-C check |
 | `test_webui.py` | 12 | FastAPI server: /api/health, /api/move, static files, validation |
 
-JavaScript tests for the web UI live in `test/*.test.js` (logic) and `test/ui.smoke.test.js` (jsdom integration; covers both manual and model-mode wiring).
+JavaScript tests for the web UI live in `ui/tests/*.test.js` (logic) and `ui/tests/ui.smoke.test.js` (jsdom integration; covers both manual and model-mode wiring).
 
 ## Entry points
 

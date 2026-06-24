@@ -27,5 +27,5 @@ gobblet-webui = "gobblet.webui:main"
 include = ["gobblet*"]
 
 [tool.pytest.ini_options]
-testpaths = ["test/gobblet"]
+testpaths = ["gobblet/tests"]
 python_files = ["test_*.py"]

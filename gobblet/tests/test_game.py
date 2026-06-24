@@ -1,4 +1,4 @@
-"""Port of test/*.test.js + new edge cases (draws, value, both-win).
+"""Port of ui/tests/*.test.js + new edge cases (draws, value, both-win).
 
 Python engine API (size-based place, per plan):
   RED=0, BLUE=1 ; S=0, M=1, L=2
