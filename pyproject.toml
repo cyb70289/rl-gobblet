@@ -12,6 +12,8 @@ dependencies = [
     "numpy",
     "tqdm",
     "tensorboard",
+    "fastapi",
+    "uvicorn",
 ]
 
 [project.optional-dependencies]

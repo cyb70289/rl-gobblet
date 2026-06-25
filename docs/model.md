@@ -77,7 +77,7 @@ JavaScript tests for the web UI live in `ui/tests/*.test.js` (logic) and `ui/tes
 ## Entry points
 
 ```bash
-python -m gobblet.train --run-dir runs/gobblet-v1 --max-iters 3     # train
+python -m gobblet.train --run-dir runs/gobblet-v1 --max-iters 20    # train
 python -m gobblet.train --resume runs/gobblet-v1                    # continue
 python -m gobblet.arena --ckpt runs/gobblet-v1/ckpt_iter2.pt        # evaluate
 python -m gobblet.play --ckpt runs/gobblet-v1/ckpt_iter2.pt         # play (CLI)

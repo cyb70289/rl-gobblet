@@ -32,7 +32,7 @@ All commands below assume the venv is activated (`. .venv/bin/activate`).
 Start a fresh training run (self-play → train → eval → checkpoint, repeated):
 
 ```bash
-python -m gobblet.train --run-dir runs/gobblet-v1 --max-iters 3
+python -m gobblet.train --run-dir runs/gobblet-v1 --max-iters 20
 ```
 
 Options:
@@ -114,14 +114,14 @@ Resume an interrupted or completed run — loads the latest checkpoint, replay
 buffer, and state.json, then continues from the next iteration:
 
 ```bash
-python -m gobblet.train --resume runs/gobblet-v1 --max-iters 3
+python -m gobblet.train --resume runs/gobblet-v1 --max-iters 20
 ```
 
 `--max-iters` is the **total** target, not additional. If the run already
 reached `--max-iters`, bump it higher to continue:
 
 ```bash
-python -m gobblet.train --resume runs/gobblet-v1 --max-iters 3
+python -m gobblet.train --resume runs/gobblet-v1 --max-iters 30
 ```
 
 ## Evaluate
