@@ -4,6 +4,8 @@ A 3×3 board game with an AlphaZero-style self-play implementation:
 a ResNet + MCTS learns to play from scratch, then serves as the
 opponent in a browser-based UI.
 
+![Gobblet](docs/gobblet.png "First player can always win the game in 13 moves")
+
 ## Game
 
 Two players (red, blue) take turns placing or moving buckets on a
@@ -19,8 +21,7 @@ AlphaZero-style. A small ResNet (6 blocks, 64 filters) outputs a
 99-dim policy (27 place + 72 move) and a tanh-bounded value. MCTS
 with PUCT selection, Dirichlet root noise, and batched leaf
 evaluation generates self-play training data. Iterations of self-play
-→ SGD → arena-eval → checkpoint continue until the network beats
-random ≥ 99% and a 1-ply greedy baseline ≥ 70%. See
+→ SGD → arena-eval → checkpoint. See
 [docs/model.md](docs/model.md) for the architecture and
 [docs/train.md](docs/train.md) for the command-line recipes.
 
@@ -40,16 +41,6 @@ flashes "thinking…" during MCTS, and the response is applied to the
 board. See [docs/ui.md](docs/ui.md) for the full UI guide, including
 the wire format used between the browser and the server.
 
-## Run the tests
-
-```bash
-# Python (112 tests)
-.venv/bin/python -m pytest
-
-# JS (62 tests, requires Node 18+)
-cd ui && npm install && npm test
-```
-
 ## Layout
 
 ```
@@ -62,3 +53,7 @@ ui/               Browser-side code
 docs/             Game rules, model architecture, training guide, UI guide
 model/            Trained checkpoints
 ```
+
+## Credit
+- GLM-5.2 for design and implementation
+- MiniMax-M3 for code improvement
