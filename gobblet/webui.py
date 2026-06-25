@@ -168,7 +168,7 @@ def main():
     else:
         cfg.mcts.simulations = args.sims
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(cfg.device())
     net = GobbletNet(cfg.net).to(device)
     if not args.smoke:
         net.load(args.ckpt)

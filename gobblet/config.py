@@ -67,9 +67,15 @@ class Config:
     time_budget_hours: float = 24.0
 
     def device(self) -> str:
+        """Pick the best available device: CUDA (NVIDIA) > MPS (Apple) > CPU."""
+        import os
         import torch
         if torch.cuda.is_available():
             return "cuda"
+        if torch.backends.mps.is_available():
+            # Let any op without an MPS kernel fall back to CPU instead of crashing.
+            os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+            return "mps"
         return "cpu"
 
     @classmethod
@@ -94,7 +100,6 @@ class Config:
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run-dir", default=None, help="run output directory")
-    parser.add_argument("--device", default=None, help="cuda | cpu (auto-detect if omitted)")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--smoke", action="store_true", help="use tiny smoke config")
 

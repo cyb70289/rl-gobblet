@@ -36,7 +36,8 @@ Each **iteration**:
   forward pass per MCTS round across all games).
 - **Training**: AdamW lr=1e-3, batch 256, 1000 steps/iter, grad-clip 1.0.
   50k FIFO replay buffer. LR step-down on plateau.
-- **Device**: auto-detects CUDA (primary) or CPU (dev/tests).
+- **Device**: auto-detects CUDA (NVIDIA), then MPS (Apple M-series GPU),
+  else CPU (dev/tests).
 
 ## Source files
 

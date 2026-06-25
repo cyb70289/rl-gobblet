@@ -71,7 +71,7 @@ def play(ckpt_path: str, human_color: int = BLUE, sims: int = 200,
     cfg = Config.for_smoke() if smoke else Config()
     cfg.mcts.simulations = sims if not smoke else 4
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(cfg.device())
     net = GobbletNet(cfg.net).to(device)
     net.load(ckpt_path)
     net.eval()

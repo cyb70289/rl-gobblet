@@ -22,9 +22,7 @@ from .selfplay import SelfPlayRunner
 class Trainer:
     def __init__(self, cfg: Config):
         self.cfg = cfg
-        self.device = torch.device(cfg.device() if cfg.device != "cpu" else "cpu")
-        if cfg.device == "cuda" and torch.cuda.is_available():
-            self.device = torch.device("cuda")
+        self.device = torch.device(cfg.device())
 
         self.run_dir = Path(cfg.run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)

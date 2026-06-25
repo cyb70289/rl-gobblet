@@ -14,10 +14,15 @@ python3 -m venv .venv          # or: virtualenv -p python3 .venv
 pip install -e ".[dev]"
 ```
 
-Requires PyTorch with CUDA for GPU training. Verify:
+Requires PyTorch with a GPU for practical training. Supported GPUs:
+NVIDIA CUDA or Apple Silicon (M3/M4) via Metal (MPS). The device is
+auto-detected (CUDA → MPS → CPU). Verify:
 
 ```bash
-python -c "import torch; print(torch.cuda.is_available())"  # True on the RTX 3060
+# NVIDIA:
+python -c "import torch; print(torch.cuda.is_available())"          # True on the RTX 3060
+# Apple Silicon:
+python -c "import torch; print(torch.backends.mps.is_available())"  # True on M3/M4
 ```
 
 All commands below assume the venv is activated (`. .venv/bin/activate`).
@@ -37,7 +42,6 @@ Options:
 | `--run-dir DIR` | `runs/default` | output directory (checkpoints, logs, TensorBoard) |
 | `--max-iters N` | 20 | stop after N iterations |
 | `--resume DIR` | — | resume an interrupted run from a run directory |
-| `--device cuda\|cpu` | auto | force a device (auto-detects CUDA) |
 | `--seed N` | 0 | RNG seed |
 | `--smoke` | off | tiny config for a fast end-to-end sanity check |
 
