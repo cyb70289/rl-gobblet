@@ -2,7 +2,7 @@
 
 PUCT selection, Dirichlet noise at root, virtual-loss-free synchronous batching.
 Each simulation round: select one leaf per concurrent root, batch-evaluate all
-non-terminal leaves with one GPU forward pass, expand + backup. 3-fold repetition
+non-terminal leaves with one forward pass, expand + backup. 3-fold repetition
 is detected along the search path (per-game); ply-cap draws come from State.
 """
 from __future__ import annotations

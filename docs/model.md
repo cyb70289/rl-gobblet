@@ -32,12 +32,11 @@ Each **iteration**:
 - **MCTS**: 128 sims/move, PUCT selection, Dirichlet root noise, tree reuse.
   Batched NN evaluation across concurrent games. τ=1 for first 10 plies
   (exploration), then τ=0 (greedy).
-- **Self-play**: 64 concurrent games, batched leaf evaluation (one GPU
+- **Self-play**: 64 concurrent games, batched leaf evaluation (one 
   forward pass per MCTS round across all games).
 - **Training**: AdamW lr=1e-3, batch 256, 1000 steps/iter, grad-clip 1.0.
   50k FIFO replay buffer. LR step-down on plateau.
-- **Device**: auto-detects CUDA (NVIDIA), then MPS (Apple M-series GPU),
-  else CPU (dev/tests).
+- **Device**: auto-detects CUDA (NVIDIA), else CPU.
 
 ## Source files
 

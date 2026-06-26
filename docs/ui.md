@@ -180,7 +180,7 @@ python -m gobblet.webui --ckpt model/gobblet.pt [--port 8000] [--host 127.0.0.1]
 - `--sims` — MCTS simulations per model move. Default 200, matches `play.py`.
   Ignored with `--smoke` (always 4).
 - `--smoke` — use `Config.for_smoke()` (tiny model, 4 sims) and skip loading
-  the checkpoint. Useful for development without GPU. The server logs
+  the checkpoint. Useful for development. The server logs
   `SMOKE mode (random init): sims=4, device=...` at startup.
 - `--static-dir` — directory containing the static files (default `ui/`).
 

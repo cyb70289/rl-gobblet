@@ -14,17 +14,6 @@ python3 -m venv .venv          # or: virtualenv -p python3 .venv
 pip install -e ".[dev]"
 ```
 
-Requires PyTorch with a GPU for practical training. Supported GPUs:
-NVIDIA CUDA or Apple Silicon (M3/M4) via Metal (MPS). The device is
-auto-detected (CUDA → MPS → CPU). Verify:
-
-```bash
-# NVIDIA:
-python -c "import torch; print(torch.cuda.is_available())"          # True on the RTX 3060
-# Apple Silicon:
-python -c "import torch; print(torch.backends.mps.is_available())"  # True on M3/M4
-```
-
 All commands below assume the venv is activated (`. .venv/bin/activate`).
 
 ## Train
@@ -220,5 +209,4 @@ python -m pytest -k selfplay               # self-play + replay
   play a specific iteration instead of the best, pass its path to `--ckpt`.
 - **If training stalls** (win-rate vs prev < 55% for 2 iterations), the loop
   auto step-downs the LR by 3×. Two more step-downs land at ~1e-4.
-- **GPU vs CPU**: CPU is fine for tests and `--smoke`; GPU is required for
   real training (CPU would be ~50× slower).

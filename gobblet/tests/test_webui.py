@@ -73,7 +73,7 @@ def test_health_returns_200_and_required_fields():
     assert body["ok"] is True
     assert body["model_loaded"] is True
     assert body["sims"] == 4
-    assert body["device"] in ("cpu", "cuda", "mps")
+    assert body["device"] in ("cpu", "cuda")
     assert body["model_path"] == "<test>"
 
 
